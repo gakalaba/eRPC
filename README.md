@@ -37,7 +37,7 @@ Some highlights:
  * Build and run the test suite:
    `cmake . -DPERF=OFF -DTRANSPORT=infiniband; make -j; sudo ctest`.
    * `DPERF=OFF` enables debugging, which greatly reduces performance. Set
-   * `DPERF=ON` for performance measurements.
+     `DPERF=ON` for performance measurements.
    * Here, `infiniband` should be replaced with `raw` for Mellanox Ethernet
      NICs, or `dpdk` for Intel Ethernet NICs.
    * A machine with two ports is needed to run the unit tests if DPDK is chosen.
