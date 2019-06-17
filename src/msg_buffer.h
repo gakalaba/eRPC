@@ -5,6 +5,10 @@
 #include "util/buffer.h"
 #include "util/math_utils.h"
 
+#ifdef SECURE
+#include "crypto.h"
+#endif
+
 namespace erpc {
 
 // Forward declarations for friendship
@@ -148,10 +152,16 @@ class MsgBuffer {
   inline uint8_t get_req_type() const { return get_pkthdr_0()->req_type; }
 
   /**
-   * Return the current amount of data in this message buffer. This can be
+   * Return the current amount of app data in this message buffer. This can be
    * smaller than it's maximum data capacity due to resizing.
    */
-  inline size_t get_data_size() const { return data_size; }
+  inline size_t get_app_data_size() const {
+#ifdef SECURE
+    return data_size - CRYPTO_HDR_LEN;
+#else
+    return data_size;
+#endif
+  }
 
  private:
   /// The optional backing hugepage buffer. buffer.buf points to the zeroth

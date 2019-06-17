@@ -1,6 +1,10 @@
 #pragma once
 
 #include <mutex>
+#ifdef SECURE
+#include <crypto.h>
+#endif /* SECURE */
+
 #include "common.h"
 #include "transport.h"
 
@@ -38,6 +42,8 @@ enum class SmPktType : int {
   kConnectResp,     ///< Session connect response
   kDisconnectReq,   ///< Session disconnect request
   kDisconnectResp,  ///< Session disconnect response
+  // kKeyExchangeReq,  ///< Key Exchange request
+  // kKeyExchangeResp, ///< Key Exchange response
 };
 
 /// The types of responses to a session management packet
@@ -48,7 +54,8 @@ enum class SmErrType : int {
   kOutOfMemory,      ///< Connect req failed because server is out of memory
   kRoutingResolutionFailure,  ///< Server failed to resolve client routing info
   kInvalidRemoteRpcId,  ///< Connect req failed because remote RPC ID was wrong
-  kInvalidTransport     ///< Connect req failed because of transport mismatch
+  kInvalidTransport,    ///< Connect req failed because of transport mismatch
+  kCryptoError
 };
 
 /// Events generated for application-level session management handler
@@ -78,7 +85,10 @@ static std::string sm_pkt_type_str(SmPktType sm_pkt_type) {
     case SmPktType::kConnectReq: return "[Connect request]";
     case SmPktType::kConnectResp: return "[Connect response]";
     case SmPktType::kDisconnectReq: return "[Disconnect request]";
-    case SmPktType::kDisconnectResp: return "[Disconnect response]";
+    case SmPktType::kDisconnectResp:
+      return "[Disconnect response]";
+      // case SmPktType::kKeyExchangeReq: return "[Key Exchange request]";
+      // case SmPktType::kKeyExchangeResp: return "[Key Exchange response]";
   };
 
   throw std::runtime_error("Invalid session management packet type.");
@@ -92,7 +102,10 @@ static bool sm_pkt_type_is_valid(SmPktType sm_pkt_type) {
     case SmPktType::kConnectReq:
     case SmPktType::kConnectResp:
     case SmPktType::kDisconnectReq:
-    case SmPktType::kDisconnectResp: return true;
+    case SmPktType::kDisconnectResp:
+      // case SmPktType::kKeyExchangeReq:
+      // case SmPktType::kKeyExchangeResp:
+      return true;
   }
   return false;
 }
@@ -104,10 +117,14 @@ static bool sm_pkt_type_is_req(SmPktType sm_pkt_type) {
   switch (sm_pkt_type) {
     case SmPktType::kPingReq:
     case SmPktType::kConnectReq:
-    case SmPktType::kDisconnectReq: return true;
+    case SmPktType::kDisconnectReq:
+      // case SmPktType::kKeyExchangeReq:
+      return true;
     case SmPktType::kPingResp:
     case SmPktType::kConnectResp:
-    case SmPktType::kDisconnectResp: return false;
+    case SmPktType::kDisconnectResp:
+      // case SmPktType::kKeyExchangeResp:
+      return false;
   }
 
   throw std::runtime_error("Invalid session management packet type.");
@@ -119,7 +136,9 @@ static SmPktType sm_pkt_type_req_to_resp(SmPktType sm_pkt_type) {
   switch (sm_pkt_type) {
     case SmPktType::kPingReq: return SmPktType::kPingResp;
     case SmPktType::kConnectReq: return SmPktType::kConnectResp;
-    case SmPktType::kDisconnectReq: return SmPktType::kDisconnectResp;
+    case SmPktType::kDisconnectReq:
+      return SmPktType::kDisconnectResp;
+    // case SmPktType::kKeyExchangeReq: return SmPktType::kKeyExchangeResp;
     case SmPktType::kPingResp:
     case SmPktType::kConnectResp:
     case SmPktType::kDisconnectResp: break;
@@ -136,7 +155,8 @@ static bool sm_err_type_is_valid(SmErrType err_type) {
     case SmErrType::kOutOfMemory:
     case SmErrType::kRoutingResolutionFailure:
     case SmErrType::kInvalidRemoteRpcId:
-    case SmErrType::kInvalidTransport: return true;
+    case SmErrType::kInvalidTransport:
+    case SmErrType::kCryptoError: return true;
   }
   return false;
 }
@@ -153,6 +173,7 @@ static std::string sm_err_type_str(SmErrType err_type) {
       return "[Routing resolution failure]";
     case SmErrType::kInvalidRemoteRpcId: return "[Invalid remote Rpc ID]";
     case SmErrType::kInvalidTransport: return "[Invalid transport]";
+    case SmErrType::kCryptoError: return "[Cryptographic Error]";
   }
 
   throw std::runtime_error("Invalid session management error type");
@@ -232,6 +253,13 @@ class SmPkt {
   SmErrType err_type;                ///< Error type, for responses only
   conn_req_uniq_token_t uniq_token;  ///< The token for this session
   SessionEndpoint client, server;    ///< Endpoint metadata
+#ifdef SECURE
+  /*
+   * Additional CRYPTO_GCM_KEY_LEN (32) bytes per, could be optimized since it
+   * is only used once per session.
+   */
+  char pub_key[CRYPTO_GCM_HEX_KEY_LEN];
+#endif /* SECURE */
 
   std::string to_string() const {
     std::ostringstream ret;

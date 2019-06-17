@@ -172,7 +172,7 @@ class RpcTest : public ::testing::Test {
 static void req_handler(ReqHandle *req_handle, void *_context) {
   auto *context = static_cast<RpcTest *>(_context);
   const MsgBuffer *req_msgbuf = req_handle->get_req_msgbuf();
-  const size_t resp_size = req_msgbuf->get_data_size();
+  const size_t resp_size = req_msgbuf->get_app_data_size();
 
   req_handle->dyn_resp_msgbuf = context->rpc->alloc_msg_buffer(resp_size);
   memcpy(req_handle->dyn_resp_msgbuf.buf, req_msgbuf->buf, resp_size);

@@ -12,7 +12,7 @@ TEST_F(RpcTest, process_rfr_st) {
 
   // Use enqueue_response() to do much of sslot formatting for the response
   sslot_0->server_info.req_msgbuf =
-      rpc->alloc_msg_buffer(kNumReqPkts * (rpc->get_max_data_per_pkt()));
+      rpc->alloc_msg_buffer(rpc->max_app_data_size_for_packets(kNumReqPkts));
   sslot_0->server_info.num_rx = kNumReqPkts;
 
   sslot_0->cur_req_num = kSessionReqWindow;

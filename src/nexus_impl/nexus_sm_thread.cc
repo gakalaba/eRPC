@@ -23,7 +23,7 @@ void Nexus::sm_thread_func(SmThreadCtx ctx) {
                 "eRPC Nexus: Invalid SM packet RX size.");
 
       ERPC_INFO("eRPC Nexus: Received SM packet %s\n",
-                sm_pkt.to_string().c_str());
+               sm_pkt.to_string().c_str());
 
       uint8_t target_rpc_id =
           sm_pkt.is_req() ? sm_pkt.server.rpc_id : sm_pkt.client.rpc_id;

@@ -20,6 +20,10 @@
 #include "util/timer.h"
 #include "util/udp_client.h"
 
+#ifdef SECURE
+#include "crypto.h"
+#endif
+
 namespace erpc {
 
 /**
@@ -75,11 +79,14 @@ class Rpc {
   /// Timeout for a session management request in milliseconds
   static constexpr size_t kSMTimeoutMs = kTesting ? 10 : 100;
 
- public:
   /// Max request or response *data* size, i.e., excluding packet headers
+  // Any function that uses it needs to be SECURE-aware, or
+  // operate at transport layer
   static constexpr size_t kMaxMsgSize =
       HugeAlloc::kMaxClassSize -
       ((HugeAlloc::kMaxClassSize / TTr::kMaxDataPerPkt) * sizeof(pkthdr_t));
+
+ public:
   static_assert((1 << kMsgSizeBits) >= kMaxMsgSize, "");
   static_assert((1 << kPktNumBits) * TTr::kMaxDataPerPkt > 2 * kMaxMsgSize, "");
 
@@ -95,11 +102,8 @@ class Rpc {
    * \param sm_handler The session management callback that is invoked when
    * sessions are successfully created or destroyed.
    *
-   * @param phy_port An Rpc object uses one physical port on the NIC. phy_port
-   * is the zero-based index of that port among active ports, as listed by
-   * `ibv_devinfo` for Raw, InfiniBand, and RoCE transports; or by
-   * `dpdk-devbind` for DPDK transport.
-   * 
+   * @param phy_port An Rpc object uses one physical port. This is the
+   * zero-based index of that port among active ports.
    * @throw runtime_error if construction fails
    */
   Rpc(Nexus *nexus, void *context, uint8_t rpc_id, sm_handler_t sm_handler,
@@ -108,6 +112,23 @@ class Rpc {
   /// Destroy the Rpc from a foreground thread
   ~Rpc();
 
+  /*
+   * @brief Call alloc_msg_buffer, but allocate space for SECURE
+   * header if needed. This function should be used by all apps
+   *
+   * @param max_data_size. See alloc_msg_buffer
+   *
+   * @return The allocated message buffer
+   */
+  inline MsgBuffer alloc_msg_buffer(size_t max_data_size) {
+    assert(max_data_size > 0);  // Doesn't work for max_data_size = 0
+
+#ifdef SECURE
+    max_data_size += CRYPTO_HDR_LEN;
+#endif
+
+    return _alloc_msg_buffer(max_data_size);
+  }
   /**
    * @brief Create a hugepage-backed buffer for storing request or response
    * messages.
@@ -128,11 +149,10 @@ class Rpc {
    * internal use by eRPC. This function does not fill in packet headers,
    * although it sets the magic field in the zeroth header.
    */
-  inline MsgBuffer alloc_msg_buffer(size_t max_data_size) {
-    assert(max_data_size > 0);  // Doesn't work for max_data_size = 0
 
+  inline MsgBuffer _alloc_msg_buffer(size_t max_data_size) {
     // This function avoids division for small data sizes
-    size_t max_num_pkts = data_size_to_num_pkts(max_data_size);
+    size_t max_num_pkts = _data_size_to_num_pkts(max_data_size);
 
     lock_cond(&huge_alloc_lock);
     Buffer buffer =
@@ -163,10 +183,15 @@ class Rpc {
   static inline void resize_msg_buffer(MsgBuffer *msg_buffer,
                                        size_t new_data_size) {
     assert(msg_buffer->is_valid());  // Can be fake
+
+#ifdef SECURE
+    new_data_size += CRYPTO_HDR_LEN;
+#endif
+
     assert(new_data_size <= msg_buffer->max_data_size);
 
     // Avoid division for single-packet data sizes
-    size_t new_num_pkts = data_size_to_num_pkts(new_data_size);
+    size_t new_num_pkts = _data_size_to_num_pkts(new_data_size);
     msg_buffer->resize(new_data_size, new_num_pkts);
   }
 
@@ -258,7 +283,8 @@ class Rpc {
    * value instead of reference since eRPC provides no application callback for
    * when the response can be re-used or freed.
    */
-  void enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf);
+  void enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf,
+                        bool encrypt = true);
 
   /// Run the event loop for some milliseconds
   inline void run_event_loop(size_t timeout_ms) {
@@ -336,8 +362,14 @@ class Rpc {
   }
 
   /// Return the maximum *data* size in one packet for the (private) transport
-  static inline constexpr size_t get_max_data_per_pkt() {
+  // This function returns the maximum size of a single-packet request/response
+  // and not the actual max data per packet
+  static inline constexpr size_t _get_max_data_per_pkt() {
+#ifdef SECURE
+    return TTr::kMaxDataPerPkt - CRYPTO_IV_LEN - CRYPTO_TAG_LEN;
+#else
     return TTr::kMaxDataPerPkt;
+#endif
   }
 
   /// Return the hostname of the remote endpoint for a connected session
@@ -351,7 +383,13 @@ class Rpc {
   }
 
   /// Return the data size in bytes that can be sent in one request or response
-  static inline size_t get_max_msg_size() { return kMaxMsgSize; }
+  static inline size_t get_max_msg_size() {
+#ifdef SECURE
+    return kMaxMsgSize - CRYPTO_HDR_LEN;
+#else
+    return kMaxMsgSize;
+#endif
+  }
 
   /// Return the ID of this Rpc object
   inline uint8_t get_rpc_id() const { return rpc_id; }
@@ -539,13 +577,45 @@ class Rpc {
     return true;
   }
 
+ public:
+  /**
+   * @brief Finds the number of packets required to send a number of bytes of
+   * data
+   * @param app_data_size The number of bytes the client would like to send
+   *
+   * @return The number of packets required
+   */
+  static inline size_t num_pkts_for_app_data_size(size_t app_data_size) {
+#ifdef SECURE
+    app_data_size += CRYPTO_HDR_LEN;
+#endif
+    if (app_data_size <= TTr::kMaxDataPerPkt) return 1;
+    return (app_data_size + TTr::kMaxDataPerPkt - 1) / TTr::kMaxDataPerPkt;
+  }
+  /**
+   * @brief
+   * @param n_packets The number of packets the client would like to send
+   *
+   * @return The maximum number of bytes which the client can use.
+   */
+  static inline size_t max_app_data_size_for_packets(size_t n_packets) {
+    size_t max_data_size = TTr::kMaxDataPerPkt * n_packets;
+
+#ifdef SECURE
+    return max_data_size - CRYPTO_HDR_LEN;
+#else
+    return max_data_size;
+#endif
+  }
+
+ private:
   /**
    * @brief Return the number of packets required for \p data_size data bytes.
    *
    * This should avoid division if \p data_size fits in one packet.
    * For \p data_size = 0, the return value need not be 0, i.e., it can be 1.
    */
-  static size_t data_size_to_num_pkts(size_t data_size) {
+  static size_t _data_size_to_num_pkts(size_t data_size) {
     if (data_size <= TTr::kMaxDataPerPkt) return 1;
     return (data_size + TTr::kMaxDataPerPkt - 1) / TTr::kMaxDataPerPkt;
   }
@@ -927,6 +997,9 @@ class Rpc {
   const size_t rpc_rto_cycles;  ///< RPC RTO in cycles
   const size_t rpc_pkt_loss_scan_cycles;  ///< Packet loss scan frequency
 
+#ifdef SECURE
+  DH *dh;
+#endif /* SECURE */
   /// A copy of the request/response handlers from the Nexus. We could use
   /// a pointer instead, but an array is faster.
   const std::array<ReqFunc, kReqTypeArraySize> req_func_arr;
@@ -1047,10 +1120,14 @@ class Rpc {
     size_t still_in_wheel_during_retx = 0;
   } pkt_loss_stats;
 
-  /// Size of the preallocated response buffer. This is one packet by default,
-  /// but some applications might benefit from a larger preallocated buffer,
-  /// at the expense of increased memory utilization.
+/// Size of the preallocated response buffer. This is one packet by default,
+/// but some applications might benefit from a larger preallocated buffer,
+/// at the expense of increased memory utilization.
+#ifdef SECURE
+  size_t pre_resp_msgbuf_size = TTr::kMaxDataPerPkt - CRYPTO_HDR_LEN;
+#else
   size_t pre_resp_msgbuf_size = TTr::kMaxDataPerPkt;
+#endif
 };
 
 // This goes at the end of every Rpc implementation file to force compilation

@@ -41,7 +41,7 @@ void point_req_handler(erpc::ReqHandle *req_handle, void *_context) {
   assert(mti != nullptr && ti != nullptr);
 
   const auto *req_msgbuf = req_handle->get_req_msgbuf();
-  assert(req_msgbuf->get_data_size() == sizeof(req_t));
+  assert(req_msgbuf->get_app_data_size() == sizeof(req_t));
 
   auto *req = reinterpret_cast<const req_t *>(req_msgbuf->buf);
   assert(req->req_type == kAppPointReqType);
@@ -73,7 +73,7 @@ void range_req_handler(erpc::ReqHandle *req_handle, void *_context) {
   assert(mti != nullptr && ti != nullptr);
 
   const auto *req_msgbuf = req_handle->get_req_msgbuf();
-  assert(req_msgbuf->get_data_size() == sizeof(req_t));
+  assert(req_msgbuf->get_app_data_size() == sizeof(req_t));
 
   auto *req = reinterpret_cast<const req_t *>(req_msgbuf->buf);
   assert(req->req_type == kAppRangeReqType);
@@ -112,7 +112,7 @@ req_t generate_request(AppContext *c) {
 // Send one request using this MsgBuffer
 void send_req(AppContext *c, size_t msgbuf_idx) {
   erpc::MsgBuffer &req_msgbuf = c->client.req_msgbuf[msgbuf_idx];
-  assert(req_msgbuf.get_data_size() == sizeof(req_t));
+  assert(req_msgbuf.get_app_data_size() == sizeof(req_t));
 
   const req_t req = generate_request(c);
   *reinterpret_cast<req_t *>(req_msgbuf.buf) = req;
@@ -135,7 +135,7 @@ void app_cont_func(void *_context, void *_msgbuf_idx) {
   }
 
   const auto &resp_msgbuf = c->client.resp_msgbuf[msgbuf_idx];
-  erpc::rt_assert(resp_msgbuf.get_data_size() == sizeof(resp_t),
+  erpc::rt_assert(resp_msgbuf.get_app_data_size() == sizeof(resp_t),
                   "Invalid response size");
 
   double usec = erpc::to_usec(erpc::rdtsc() - c->client.req_ts[msgbuf_idx],

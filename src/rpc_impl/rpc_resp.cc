@@ -8,7 +8,21 @@ namespace erpc {
 //
 // So sslot->rx_msgbuf may or may not be valid at this point.
 template <class TTr>
-void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
+void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf,
+                                bool encrypt) {
+  SSlot *sslot = static_cast<SSlot *>(req_handle);
+  Session *session = sslot->session;
+#ifdef SECURE
+  if (encrypt) {
+    int encrypt_res = aes_gcm_encrypt(
+        resp_msgbuf->buf, resp_msgbuf->get_app_data_size(), session->secret);
+    assert(encrypt_res >= 0);
+    _unused(encrypt_res);
+  }
+#endif
+
+  _unused(encrypt);
+
   // When called from a background thread, enqueue to the foreground thread
   if (unlikely(!in_dispatch())) {
     bg_queues._enqueue_response.unlocked_push(
@@ -17,11 +31,9 @@ void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
   }
 
   // If we're here, we're in the dispatch thread
-  SSlot *sslot = static_cast<SSlot *>(req_handle);
   sslot->server_info.sav_num_req_pkts = sslot->server_info.req_msgbuf.num_pkts;
   bury_req_msgbuf_server_st(sslot);  // Bury the possibly-dynamic req MsgBuffer
 
-  Session *session = sslot->session;
   if (unlikely(!session->is_connected())) {
     // A session reset could be waiting for this enqueue_response()
     assert(session->state == SessionState::kResetInProgress);
@@ -93,9 +105,16 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
   ci.num_rx++;
   ci.progress_tsc = ev_loop_tsc;
 
+  // TODO: Ensure that resizing resp buffer to req buffer - hdrlen does
+  // not cause overwrites/memory corruption anywhere
+
   // Special handling for single-packet responses
   if (likely(pkthdr->msg_size <= TTr::kMaxDataPerPkt)) {
+#ifdef SECURE
+    resize_msg_buffer(resp_msgbuf, pkthdr->msg_size - CRYPTO_HDR_LEN);
+#else
     resize_msg_buffer(resp_msgbuf, pkthdr->msg_size);
+#endif
 
     // Copy eRPC header and data, but not Transport headroom
     memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
@@ -107,8 +126,13 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     MsgBuffer *req_msgbuf = sslot->tx_msgbuf;
 
     if (pkthdr->pkt_num == req_msgbuf->num_pkts - 1) {
-      // This is the first response packet. Size the response and copy header.
+// This is the first response packet. Size the response and copy header.
+#ifdef SECURE
+      resize_msg_buffer(resp_msgbuf, pkthdr->msg_size - CRYPTO_HDR_LEN);
+#else
       resize_msg_buffer(resp_msgbuf, pkthdr->msg_size);
+#endif
+
       memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
              sizeof(pkthdr_t) - kHeadroom);
     }
@@ -156,6 +180,17 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
   }
 
   if (likely(_cont_etid == kInvalidBgETid)) {
+#ifdef SECURE
+
+    int decrypt_res = aes_gcm_decrypt(
+        resp_msgbuf->buf, resp_msgbuf->get_app_data_size(), session->secret);
+
+    _unused(decrypt_res);
+
+    assert(decrypt_res >= 0);
+
+#endif
+
     _cont_func(context, _tag);
   } else {
     submit_bg_resp_st(_cont_func, _tag, _cont_etid);

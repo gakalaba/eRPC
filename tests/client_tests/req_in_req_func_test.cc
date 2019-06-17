@@ -74,7 +74,7 @@ void req_handler_cp(ReqHandle *req_handle_cp, void *_c) {
 
   // This will be freed by eRPC when the request handler returns
   const MsgBuffer *req_msgbuf_cp = req_handle_cp->get_req_msgbuf();
-  size_t req_size_cp = req_msgbuf_cp->get_data_size();
+  size_t req_size_cp = req_msgbuf_cp->get_app_data_size();
 
   test_printf("Primary [Rpc %u]: Received request of length %zu\n",
               c->rpc->get_rpc_id(), req_size_cp);
@@ -107,7 +107,7 @@ void req_handler_pb(ReqHandle *req_handle, void *_c) {
   ASSERT_EQ(c->rpc->in_background(), backup_bg);
 
   const MsgBuffer *req_msgbuf_pb = req_handle->get_req_msgbuf();
-  size_t req_size = req_msgbuf_pb->get_data_size();
+  size_t req_size = req_msgbuf_pb->get_app_data_size();
 
   test_printf("Backup [Rpc %u]: Received request of length %zu.\n",
               c->rpc->get_rpc_id(), req_size);
@@ -133,7 +133,7 @@ void primary_cont_func(void *_c, void *_tag) {
 
   const MsgBuffer &resp_msgbuf_pb = srv_req_info->resp_msgbuf_pb;
   test_printf("Primary [Rpc %u]: Received response of length %zu\n",
-              c->rpc->get_rpc_id(), resp_msgbuf_pb.get_data_size());
+              c->rpc->get_rpc_id(), resp_msgbuf_pb.get_app_data_size());
 
   // Check that we're still running in the same thread as for the
   // client-to-primary request
@@ -142,7 +142,13 @@ void primary_cont_func(void *_c, void *_tag) {
   // Extract the request info
   size_t req_size_cp = srv_req_info->req_size_cp;
   ReqHandle *req_handle_cp = srv_req_info->req_handle_cp;
-  assert(resp_msgbuf_pb.get_data_size() == req_size_cp);
+
+#ifdef SECURE
+  // FIXME key
+  aes_gcm_decrypt(srv_req_info->req_msgbuf_pb.buf, srv_req_info->req_msgbuf_pb.get_app_data_size(), erpc::gcm_key);
+#endif
+
+  assert(resp_msgbuf_pb.get_app_data_size() == req_size_cp);
 
   // Check the response from server #1
   for (size_t i = 0; i < req_size_cp; i++) {
@@ -208,10 +214,10 @@ void client_cont_func(void *_c, void *_tag) {
   const MsgBuffer &resp_msgbuf = c->resp_msgbufs[msgbuf_i];
 
   test_printf("Client [Rpc %u]: Received response for req %u, length = %zu.\n",
-              c->rpc->get_rpc_id(), tag.s.req_i, resp_msgbuf.get_data_size());
+              c->rpc->get_rpc_id(), tag.s.req_i, resp_msgbuf.get_app_data_size());
 
   // Check the response
-  ASSERT_EQ(resp_msgbuf.get_data_size(), req_size);
+  ASSERT_EQ(resp_msgbuf.get_app_data_size(), req_size);
   for (size_t i = 0; i < req_size; i++) {
     ASSERT_EQ(resp_msgbuf.buf[i], kTestDataByte + 3);
   }
@@ -274,32 +280,32 @@ TEST(Base, BothInForeground) {
                                ConnectServers::kTrue, 0.0);
 }
 
-/// 1 primary, 1 backup, primary in background
+// 1 primary, 1 backup, primary in background
 TEST(Base, PrimaryInBackground) {
-  primary_bg = true;
-  backup_bg = false;
+ primary_bg = true;
+ backup_bg = false;
 
-  auto reg_info_vec = {
-      ReqFuncRegInfo(kTestReqTypeCP, req_handler_cp, ReqFuncType::kBackground),
-      ReqFuncRegInfo(kTestReqTypePB, req_handler_pb, ReqFuncType::kForeground)};
+ auto reg_info_vec = {
+     ReqFuncRegInfo(kTestReqTypeCP, req_handler_cp, ReqFuncType::kBackground),
+     ReqFuncRegInfo(kTestReqTypePB, req_handler_pb, ReqFuncType::kForeground)};
 
-  // 2 client sessions (=> 2 server threads), 1 background threads
-  launch_server_client_threads(2, 8, client_thread, reg_info_vec,
-                               ConnectServers::kTrue, 0.0);
+ // 2 client sessions (=> 2 server threads), 1 background threads
+ launch_server_client_threads(2, 8, client_thread, reg_info_vec,
+                              ConnectServers::kTrue, 0.0);
 }
 
 /// 1 primary, 1 backup, both in background
 TEST(Base, BothInBackground) {
-  primary_bg = true;
-  backup_bg = true;
+ primary_bg = true;
+ backup_bg = true;
 
-  auto reg_info_vec = {
-      ReqFuncRegInfo(kTestReqTypeCP, req_handler_cp, ReqFuncType::kBackground),
-      ReqFuncRegInfo(kTestReqTypePB, req_handler_pb, ReqFuncType::kBackground)};
+ auto reg_info_vec = {
+     ReqFuncRegInfo(kTestReqTypeCP, req_handler_cp, ReqFuncType::kBackground),
+     ReqFuncRegInfo(kTestReqTypePB, req_handler_pb, ReqFuncType::kBackground)};
 
-  // 2 client sessions (=> 2 server threads), 3 background threads
-  launch_server_client_threads(2, 3, client_thread, reg_info_vec,
-                               ConnectServers::kTrue, 0.0);
+ // 2 client sessions (=> 2 server threads), 3 background threads
+ launch_server_client_threads(2, 3, client_thread, reg_info_vec,
+                              ConnectServers::kTrue, 0.0);
 }
 
 int main(int argc, char **argv) {

@@ -39,7 +39,7 @@ struct app_appendentries_t {
       buf += sizeof(client_req_t);
     }
 
-    assert(buf == req_msgbuf.buf + req_msgbuf.get_data_size());
+    assert(buf == req_msgbuf.buf + req_msgbuf.get_app_data_size());
   }
 
   static constexpr size_t kStaticMsgEntryArrSize = 16;
@@ -81,7 +81,7 @@ struct app_appendentries_t {
         buf += sizeof(client_req_t);
       }
 
-      assert(buf == req_msgbuf->buf + req_msgbuf->get_data_size());
+      assert(buf == req_msgbuf->buf + req_msgbuf->get_app_data_size());
     }
   }
 };
@@ -181,7 +181,7 @@ void appendentries_cont(void *_context, void *_tag) {
   if (kAppTimeEnt) c->server.time_ents.emplace_back(TimeEntType::kRecvAeResp);
   auto *rrt = reinterpret_cast<raft_req_tag_t *>(_tag);
 
-  if (likely(rrt->resp_msgbuf.get_data_size() > 0)) {
+  if (likely(rrt->resp_msgbuf.get_app_data_size() > 0)) {
     // The RPC was successful
     if (kAppVerbose) {
       printf("smr: Received appendentries response from node %s [%s].\n",

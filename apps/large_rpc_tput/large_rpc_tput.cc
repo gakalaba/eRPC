@@ -36,7 +36,7 @@ void app_cont_func(void *, void *);  // Forward declaration
 // Send a request using this MsgBuffer
 void send_req(AppContext *c, size_t msgbuf_idx) {
   erpc::MsgBuffer &req_msgbuf = c->req_msgbuf[msgbuf_idx];
-  assert(req_msgbuf.get_data_size() == FLAGS_req_size);
+  assert(req_msgbuf.get_app_data_size() == FLAGS_req_size);
 
   if (kAppVerbose) {
     printf("large_rpc_tput: Thread %zu sending request using msgbuf_idx %zu.\n",
@@ -88,7 +88,7 @@ void app_cont_func(void *_context, void *_tag) {
   c->lat_vec.push_back(usec);
 
   // Check the response
-  erpc::rt_assert(resp_msgbuf.get_data_size() == FLAGS_resp_size,
+  erpc::rt_assert(resp_msgbuf.get_app_data_size() == FLAGS_resp_size,
                   "Invalid response size");
 
   if (kAppClientCheckResp) {
@@ -271,8 +271,8 @@ int main(int argc, char **argv) {
   erpc::rt_assert(connect_sessions_func != nullptr, "No connect_sessions_func");
 
   erpc::Nexus nexus(erpc::get_uri_for_process(FLAGS_process_id),
-                    FLAGS_numa_node, 0);
-  nexus.register_req_func(kAppReqType, req_handler);
+                    FLAGS_numa_node, 4);
+  nexus.register_req_func(kAppReqType, req_handler, erpc::ReqFuncType::kBackground);
 
   size_t num_threads = FLAGS_process_id == 0 ? FLAGS_num_proc_0_threads
                                              : FLAGS_num_proc_other_threads;

@@ -43,7 +43,7 @@ void cont_regular(void *, void *);  // Forward declaration
 // Send a regular request using this MsgBuffer
 void send_req_regular(AppContext *c, size_t msgbuf_idx) {
   erpc::MsgBuffer &req_msgbuf = c->req_msgbuf[msgbuf_idx];
-  assert(req_msgbuf.get_data_size() == FLAGS_regular_req_size);
+  assert(req_msgbuf.get_app_data_size() == FLAGS_regular_req_size);
 
   if (kAppVerbose) {
     printf("congestion: Thread %zu sending regular req using msgbuf_idx %zu.\n",
@@ -89,7 +89,7 @@ void cont_regular(void *_context, void *_msgbuf_idx) {
                               c->rpc->get_freq_ghz());
   c->regular_latency.update(usec / FLAGS_regular_latency_divisor);
 
-  assert(resp_msgbuf->get_data_size() == FLAGS_regular_resp_size);
+  assert(resp_msgbuf->get_app_data_size() == FLAGS_regular_resp_size);
   erpc::rt_assert(resp_msgbuf->buf[0] == kAppDataByte);  // Touch
 
   send_req_regular(c, msgbuf_idx);  // Clock this response

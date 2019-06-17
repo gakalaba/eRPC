@@ -60,12 +60,12 @@ Nexus::Nexus(std::string local_uri, size_t numa_node, size_t num_bg_threads)
   // Bind the session management thread to the last lcore on numa_node
   size_t sm_thread_lcore_index = num_lcores_per_numa_node() - 1;
   ERPC_INFO("eRPC Nexus: Launching session management thread on core %zu.\n",
-            get_lcores_for_numa_node(numa_node).at(sm_thread_lcore_index));
+           get_lcores_for_numa_node(numa_node).at(sm_thread_lcore_index));
   sm_thread = std::thread(sm_thread_func, sm_thread_ctx);
   bind_to_core(sm_thread, numa_node, sm_thread_lcore_index);
 
   ERPC_INFO("eRPC Nexus: Created with management UDP port %u, hostname %s.\n",
-            sm_udp_port, hostname.c_str());
+           sm_udp_port, hostname.c_str());
 }
 
 Nexus::~Nexus() {

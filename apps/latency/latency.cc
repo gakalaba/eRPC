@@ -51,7 +51,7 @@ void req_handler(erpc::ReqHandle *req_handle, void *_context) {
 
 #if USE_PMEM == true
   const erpc::MsgBuffer *req_msgbuf = req_handle->get_req_msgbuf();
-  const size_t copy_size = req_msgbuf->get_data_size();
+  const size_t copy_size = req_msgbuf->get_app_data_size();
   if (c->file_offset + copy_size >= kAppPmemFileSize) c->file_offset = 0;
   pmem_memcpy_persist(&c->pbuf[c->file_offset], req_msgbuf->buf, copy_size);
 
@@ -109,7 +109,7 @@ inline void send_req(ClientContext &c) {
 
 void app_cont_func(void *_context, void *) {
   auto *c = static_cast<ClientContext *>(_context);
-  assert(c->resp_msgbuf.get_data_size() == kAppRespSize);
+  assert(c->resp_msgbuf.get_app_data_size() == kAppRespSize);
 
   double req_lat_us =
       erpc::to_usec(erpc::rdtsc() - c->start_tsc, c->rpc->get_freq_ghz());

@@ -35,7 +35,7 @@ static std::string msg_requestvote_response_string(
 void requestvote_handler(erpc::ReqHandle *req_handle, void *_context) {
   auto *c = static_cast<AppContext *>(_context);
   const erpc::MsgBuffer *req_msgbuf = req_handle->get_req_msgbuf();
-  assert(req_msgbuf->get_data_size() == sizeof(app_requestvote_t));
+  assert(req_msgbuf->get_app_data_size() == sizeof(app_requestvote_t));
 
   auto *rv_req = reinterpret_cast<app_requestvote_t *>(req_msgbuf->buf);
   printf("smr: Received requestvote request from %s: %s [%s].\n",
@@ -104,7 +104,7 @@ void requestvote_cont(void *_context, void *_tag) {
   auto *msg_rv_resp =
       reinterpret_cast<msg_requestvote_response_t *>(rrt->resp_msgbuf.buf);
 
-  if (likely(rrt->resp_msgbuf.get_data_size() > 0)) {
+  if (likely(rrt->resp_msgbuf.get_app_data_size() > 0)) {
     // The RPC was successful
     printf("smr: Received requestvote response from node %s: %s [%s].\n",
            node_id_to_name_map[raft_node_get_id(rrt->node)].c_str(),

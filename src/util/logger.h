@@ -25,11 +25,14 @@ namespace erpc {
 // Log levels: higher means more verbose
 #define ERPC_LOG_LEVEL_OFF 0
 #define ERPC_LOG_LEVEL_ERROR 1  // Only fatal conditions
-#define ERPC_LOG_LEVEL_WARN 2  // Conditions from which it's possible to recover
-#define ERPC_LOG_LEVEL_INFO 3  // Reasonable to log (e.g., management packets)
-#define ERPC_LOG_LEVEL_REORDER 4  // Too frequent to log (e.g., reordered pkts)
-#define ERPC_LOG_LEVEL_TRACE 5  // Extremely frequent (e.g., all datapath pkts)
-#define ERPC_LOG_LEVEL_CC 6     // Even congestion control decisions!
+#define ERPC_LOG_LEVEL_WARN \
+  2  // Conditions from which it is possible to recover
+#define ERPC_LOG_LEVEL_INFO 3  // Reasonable to print (e.g., management packets)
+#define ERPC_LOG_LEVEL_REORDER \
+  4  // Too frequent to print (e.g., reordered packets)
+#define ERPC_LOG_LEVEL_TRACE \
+  5                          // Extremely frequent (e.g., all datapath packets)
+#define ERPC_LOG_LEVEL_CC 6  // Even congestion control decisions!
 
 #define ERPC_LOG_DEFAULT_STREAM stdout
 
@@ -40,8 +43,8 @@ namespace erpc {
 #define trace_file_or_default_stream trace_file
 //#define trace_file_or_default_stream ERPC_LOG_DEFAULT_STREAM
 
-// If ERPC_LOG_LEVEL is not defined, default to the highest level so that
-// YouCompleteMe does not report compilation errors
+// If ERPC_LOG_LEVEL is not defined, default to the highest level for
+// YouCompleteMe
 #ifndef ERPC_LOG_LEVEL
 #define ERPC_LOG_LEVEL ERPC_LOG_LEVEL_CC
 #endif

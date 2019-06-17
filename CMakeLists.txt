@@ -31,6 +31,7 @@ set(COMPILE_ERPC_LIB ON)
 # Options exposed to the user
 set(TRANSPORT "dpdk" CACHE STRING "Datapath transport (infiniband/raw/dpdk)")
 option(ROCE "Use RoCE if TRANSPORT is infiniband" OFF)
+option(SECURE "Use AES encryption (experimental/transport-agnostic)" OFF)
 option(PERF "Compile for performance" ON)
 set(PGO "none" CACHE STRING "Profile-guided optimization (generate/use/none)")
 set(LOG_LEVEL "warn" CACHE STRING "Logging level (none/error/warn/info/reorder/trace/cc)") 
@@ -106,6 +107,21 @@ else(TESTING)
   add_definitions(-DTESTING=false)
 endif(TESTING)
 
+# If encryption is enabled...
+if(SECURE)
+  message(STATUS "Encryption is enabled. This is an experimental feature and may break things.")
+  add_definitions(-DSECURE=true)
+  find_library(SSL_LIB ssl)
+
+  if(NOT SSL_LIB)
+    message(FATAL_ERROR "openssl not found")
+  endif()
+
+  set(LIBRARIES ${LIBRARIES} ssl crypto)
+else(SECURE)
+  message(STATUS "Encryption is disabled. Compiling without AES/OpenSSL support")
+endif(SECURE)
+
 # Link-time optimization
 if(LTO)
   message(STATUS "LTO is enabled. eRPC library won't be compiled.")
@@ -147,13 +163,17 @@ set(SOURCES
   src/util/tls_registry.cc)
 
 # Boost
-find_package(Boost) 
+find_package(Boost)
 if(Boost_FOUND)
   message(STATUS "Boost include directory = ${Boost_INCLUDE_DIRS}")
   include_directories(system ${Boost_INCLUDE_DIRS})
 else()
   message(FATAL_ERROR "Boost not found.")
 endif()
+
+if(SECURE)
+  set(SOURCES ${SOURCES} src/crypto/crypto.cc)
+endif(SECURE)
 
 # Transport-specific. Mellanox OFED drivers are the best choice for raw and
 # infiniband, but they do not play well with DPDK. So we compile only one
