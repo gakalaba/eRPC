@@ -37,7 +37,7 @@ int aes_gcm_encrypt_internal(unsigned char *data_buf, int data_len,
 #endif
 
   // TODO: replace gcm_key with negotiated key
-  EVP_EncryptInit_ex(ctx, _CRYPTO_CIPHER, NULL, key, iv_ptr);
+  EVP_EncryptInit_ex(ctx, _CRYPTO_CIPHER, nullptr, key, iv_ptr);
 
   EVP_EncryptUpdate(ctx, data_buf, &tmplen,
                     reinterpret_cast<const unsigned char *>(data_buf),
@@ -110,7 +110,7 @@ int aes_gcm_decrypt_internal(unsigned char *data_buf, int data_len,
   int pt_len = 0, tmplen = 0, rv;
 
   ctx = EVP_CIPHER_CTX_new();
-  EVP_DecryptInit_ex(ctx, _CRYPTO_CIPHER, NULL, key, iv_ptr);
+  EVP_DecryptInit_ex(ctx, _CRYPTO_CIPHER, nullptr, key, iv_ptr);
 
   EVP_DecryptUpdate(ctx, data_buf, &tmplen, data_buf, data_len);
   pt_len += tmplen;

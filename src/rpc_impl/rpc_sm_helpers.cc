@@ -91,9 +91,9 @@ void Rpc<TTr>::send_sm_req_st(Session *session) {
   sm_pkt.server = session->server;
 #ifdef SECURE
   const BIGNUM *pub_key;
-  DH_get0_key(dh, &pub_key, NULL);
+  DH_get0_key(dh, &pub_key, nullptr);
   char *key = BN_bn2hex(pub_key);
-  if (key == NULL) {
+  if (key == nullptr) {
     assert(0);  // FIXME
     return;
   }

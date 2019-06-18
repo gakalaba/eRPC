@@ -129,9 +129,9 @@ void Rpc<TTr>::handle_connect_req_st(const SmPkt &sm_pkt) {
     return;
   }
   const BIGNUM *pub_key;
-  DH_get0_key(dh, &pub_key, NULL);
+  DH_get0_key(dh, &pub_key, nullptr);
   char *key = BN_bn2hex(pub_key);
-  if (key == NULL) {
+  if (key == nullptr) {
     sm_pkt_udp_tx_st(sm_construct_resp(sm_pkt, SmErrType::kCryptoError));
     return;
   }
