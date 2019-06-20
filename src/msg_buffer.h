@@ -43,10 +43,7 @@ class MsgBuffer {
   /// Return a pointer to the nth packet header of this MsgBuffer.
   /// get_pkthdr_0() is more efficient for retrieving the zeroth header.
   inline pkthdr_t *get_pkthdr_n(size_t n) const {
-    if (unlikely(n == 0)) return get_pkthdr_0();
-    return reinterpret_cast<pkthdr_t *>(
-        buf + round_up<sizeof(size_t)>(max_data_size) +
-        (n - 1) * sizeof(pkthdr_t));
+    return reinterpret_cast<pkthdr_t *>(buf - (n + 1) * sizeof(pkthdr_t));
   }
 
   ///@{ Accessors for the packet header
@@ -104,14 +101,14 @@ class MsgBuffer {
         data_size(max_data_size),
         max_num_pkts(max_num_pkts),
         num_pkts(max_num_pkts),
-        buf(buffer.buf + sizeof(pkthdr_t)) {
+        buf(buffer.buf + max_num_pkts * sizeof(pkthdr_t)) {
     assert(buffer.buf != nullptr);  // buffer must be valid
     // data_size can be 0
     assert(max_num_pkts >= 1);
     assert(buffer.class_size >=
            max_data_size + max_num_pkts * sizeof(pkthdr_t));
 
-    pkthdr_t *pkthdr_0 = reinterpret_cast<pkthdr_t *>(buffer.buf);
+    pkthdr_t *pkthdr_0 = this->get_pkthdr_0();
     pkthdr_0->magic = kPktHdrMagic;
 
     // UDP checksum for raw Ethernet. Useless for other transports.

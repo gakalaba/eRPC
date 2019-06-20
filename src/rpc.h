@@ -122,13 +122,9 @@ class Rpc {
    */
   inline MsgBuffer alloc_msg_buffer(size_t max_data_size) {
     assert(max_data_size > 0);  // Doesn't work for max_data_size = 0
-
-#ifdef SECURE
-    max_data_size += CRYPTO_HDR_LEN;
-#endif
-
     return _alloc_msg_buffer(max_data_size);
   }
+
   /**
    * @brief Create a hugepage-backed buffer for storing request or response
    * messages.
@@ -149,14 +145,13 @@ class Rpc {
    * internal use by eRPC. This function does not fill in packet headers,
    * although it sets the magic field in the zeroth header.
    */
-
   inline MsgBuffer _alloc_msg_buffer(size_t max_data_size) {
     // This function avoids division for small data sizes
     size_t max_num_pkts = _data_size_to_num_pkts(max_data_size);
 
     lock_cond(&huge_alloc_lock);
     Buffer buffer =
-        huge_alloc->alloc(max_data_size + (max_num_pkts * sizeof(pkthdr_t)));
+        huge_alloc->alloc(max_num_pkts * sizeof(pkthdr_t) + max_data_size);
     unlock_cond(&huge_alloc_lock);
 
     if (unlikely(buffer.buf == nullptr)) {
