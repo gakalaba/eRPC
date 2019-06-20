@@ -315,6 +315,90 @@ TEST(AesGcmTest, PerfBig) {
   }
 }
 
+// Correctness test for encrypting 64 byte payloads
+TEST(AesGcmTest, BlockCorrectnessBig) {
+  struct gcm_data gdata_big;  // defined in aes_gcm
+  // Table values for large test, including Key, Plaintext, Cyphertext, Tag
+  // Vector 8 in gcm_vectors.h
+  // Key is 128 bits
+  uint8_t key_big[GCM_128_KEY_LEN] = {0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65,
+                                      0x73, 0x1c, 0x6d, 0x6a, 0x8f, 0x94,
+                                      0x67, 0x30, 0x83, 0x08};
+  // Message is 60 bytes
+  unsigned char plaintext_big_true[kTestLenBig2] = {
+      0xd9, 0x31, 0x32, 0x25, 0xf8, 0x84, 0x06, 0xe5, 0xa5, 0x59, 0x09, 0xc5,
+      0xaf, 0xf5, 0x26, 0x9a, 0x86, 0xa7, 0xa9, 0x53, 0x15, 0x34, 0xf7, 0xda,
+      0x2e, 0x4c, 0x30, 0x3d, 0x8a, 0x31, 0x8a, 0x72, 0x1c, 0x3c, 0x0c, 0x95,
+      0x95, 0x68, 0x09, 0x53, 0x2f, 0xcf, 0x0e, 0x24, 0x49, 0xa6, 0xb5, 0x25,
+      0xb1, 0x6a, 0xed, 0xf5, 0xaa, 0x0d, 0xe6, 0x57, 0xba, 0x63, 0x7b, 0x39};
+  unsigned char plaintext_big_test[kTestLenBig2];
+  // Cypher will be 60 bytes long too
+  unsigned char cyphertext_big_true[kTestLenBig2] = {
+      0x42, 0x83, 0x1e, 0xc2, 0x21, 0x77, 0x74, 0x24, 0x4b, 0x72, 0x21, 0xb7,
+      0x84, 0xd0, 0xd4, 0x9c, 0xe3, 0xaa, 0x21, 0x2f, 0x2c, 0x02, 0xa4, 0xe0,
+      0x35, 0xc1, 0x7e, 0x23, 0x29, 0xac, 0xa1, 0x2e, 0x21, 0xd5, 0x14, 0xb2,
+      0x54, 0x66, 0x93, 0x1c, 0x7d, 0x8f, 0x6a, 0x5a, 0xac, 0x84, 0xaa, 0x05,
+      0x1b, 0xa3, 0x0b, 0x39, 0x6a, 0x0a, 0xac, 0x97, 0x3d, 0x58, 0xe0, 0x91};
+  unsigned char cyphertext_big_test[kTestLenBig2];
+  // Tag will be 16 bytes
+  unsigned char auth_tag_big_true[MAX_TAG_LEN] = {
+      0x5b, 0xc9, 0x4f, 0xbc, 0x32, 0x21, 0xa5, 0xdb,
+      0x94, 0xfa, 0xe9, 0x5a, 0xe7, 0x12, 0x1a, 0x47};
+  unsigned char auth_tag_big_test[MAX_TAG_LEN];
+  // IV will be 16 bytes
+  unsigned char IV_big[GCM_IV_LEN] = {0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce,
+                                      0xdb, 0xad, 0xde, 0xca, 0xf8, 0x88,
+                                      0x0,  0x0,  0x0,  0x1};
+  // Additional data will be 20 bytes
+  unsigned char AAD_big[(kAADLengthBig)] = {
+      0xfe, 0xed, 0xfa, 0xce, 0xde, 0xad, 0xbe, 0xef, 0xfe, 0xed,
+      0xfa, 0xce, 0xde, 0xad, 0xbe, 0xef, 0xab, 0xad, 0xda, 0xd2};
+  ;
+  // Prefills the gcm data with key values for each round
+  // and the initial sub hash key for tag encoding
+  // This is only required once for a given key
+  aesni_gcm128_pre(key_big, &gdata_big);
+  printf(
+      "AES GCM correctness parameters block by block big plain text length:%zu; "
+      "IV length:%d; ADD length:%zu; Key length:%d \n",
+      kTestLenBig2, GCM_IV_LEN, kAADLengthBig, GCM_128_KEY_LEN);
+  // Correctness for big Plaintext
+  {
+    aesni_gcm128_init(&gdata_big, IV_big, AAD_big, kAADLengthBig);
+    aesni_gcm128_enc_update(&gdata_big, cyphertext_big_test,
+                                        plaintext_big_true, 16);
+    aesni_gcm128_enc_update(&gdata_big, &cyphertext_big_test[16],
+                                        &plaintext_big_true[16], 16);
+    aesni_gcm128_enc_update(&gdata_big, &cyphertext_big_test[32],
+                                        &plaintext_big_true[32], 16);
+    aesni_gcm128_enc_update(&gdata_big, &cyphertext_big_test[48],
+                                       &plaintext_big_true[48], 16);
+    aesni_gcm128_enc_finalize(&gdata_big, auth_tag_big_test, MAX_TAG_LEN);
+    check_data(cyphertext_big_test, cyphertext_big_true, kTestLenBig2, 0,
+               "ISA-L Encrypt big plaintext check of Cyphertext (C)");
+    check_data(auth_tag_big_test, auth_tag_big_true, MAX_TAG_LEN, 0,
+               "ISA-L Encrypt big plaintext check of Authentication Tag (T)");
+  }
+
+  {
+    aesni_gcm128_init(&gdata_big, IV_big, AAD_big, kAADLengthBig);
+    aesni_gcm128_dec_update(&gdata_big, plaintext_big_test,
+                                        cyphertext_big_true, 16);
+    aesni_gcm128_dec_update(&gdata_big, &plaintext_big_test[16],
+                                        &cyphertext_big_true[16], 16);
+    aesni_gcm128_dec_update(&gdata_big, &plaintext_big_test[32],
+                                        &cyphertext_big_true[32], 16);
+    aesni_gcm128_dec_update(&gdata_big, &plaintext_big_test[48],
+                                       &cyphertext_big_true[48], 16);
+    aesni_gcm128_dec_finalize(&gdata_big, auth_tag_big_test, MAX_TAG_LEN);
+    check_data(plaintext_big_test, plaintext_big_true, kTestLenBig2, 0,
+               "ISA-L Decrypt big plaintext check of Plaintext (P)");
+    check_data(auth_tag_big_test, auth_tag_big_true, MAX_TAG_LEN, 0,
+               "ISA-L Decrypt big plaintext check of Authentication Tag (T)");
+  }
+}
+
+
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
