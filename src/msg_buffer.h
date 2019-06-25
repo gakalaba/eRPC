@@ -136,8 +136,10 @@ class MsgBuffer {
   inline void resize(size_t new_data_size, size_t new_num_pkts) {
     assert(new_data_size <= max_data_size);
     assert(new_num_pkts <= max_num_pkts);
+    size_t pkthdrs_to_skip = num_pkts - new_num_pkts;
     data_size = new_data_size;
     num_pkts = new_num_pkts;
+    buffer.buf += pkthdrs_to_skip * sizeof(pkthdr_t);
   }
 
  public:

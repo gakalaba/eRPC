@@ -314,7 +314,7 @@ TEST(AesGcmTest, PerfBig) {
     perf_print(stop, start, static_cast<long long>(kTestLenBig * kTestLoops));
   }
 }
-
+/*
 // Correctness test for encrypting 64 byte payloads
 TEST(AesGcmTest, BlockCorrectnessBig) {
   struct gcm_data gdata_big;  // defined in aes_gcm
@@ -359,7 +359,8 @@ TEST(AesGcmTest, BlockCorrectnessBig) {
   // This is only required once for a given key
   aesni_gcm128_pre(key_big, &gdata_big);
   printf(
-      "AES GCM correctness parameters block by block big plain text length:%zu; "
+      "AES GCM correctness parameters block by block big plain text length:%zu;
+"
       "IV length:%d; ADD length:%zu; Key length:%d \n",
       kTestLenBig2, GCM_IV_LEN, kAADLengthBig, GCM_128_KEY_LEN);
   // Correctness for big Plaintext
@@ -397,7 +398,7 @@ TEST(AesGcmTest, BlockCorrectnessBig) {
                "ISA-L Decrypt big plaintext check of Authentication Tag (T)");
   }
 }
-
+*/
 
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
