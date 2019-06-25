@@ -198,6 +198,7 @@ void Rpc<TTr>::handle_connect_resp_st(const SmPkt &sm_pkt) {
     sm_handler(session->local_session_num, SmEventType::kConnectFailed,
                sm_pkt.err_type, context);
     bury_session_st(session);
+
     return;
   }
 

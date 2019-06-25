@@ -21,9 +21,6 @@
 #include "rpc_constants.h"
 #include "tweakme.h"
 
-// For backtrace - maybe put in a DEBUG #define
-#include <execinfo.h>
-
 namespace erpc {
 
 #define _unused(x) ((void)(x))  // Make production build happy

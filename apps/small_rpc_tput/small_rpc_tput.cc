@@ -2,7 +2,6 @@
 #include <signal.h>
 #include <cstring>
 #include "../apps_common.h"
-#include "rpc_types.h"
 #include "rpc.h"
 #include "util/autorun_helpers.h"
 #include "util/latency.h"
@@ -202,11 +201,10 @@ void app_cont_func(void *_context, void *_tag) {
 
   if (!kAppPayloadCheck) {
     // Do a cheap check, but touch the response MsgBuffer
-    // if (unlikely(resp_msgbuf.buf[0] != kAppDataByte)) {
-      // fprintf(stderr, "Response did not match: %d %d\n", resp_msgbuf.buf[0], kAppDataByte);
-      // fprintf(stderr, "Invalid response.\n");
-      // exit(-1);
-    // }
+    if (unlikely(resp_msgbuf.buf[0] != kAppDataByte)) {
+      fprintf(stderr, "Invalid response.\n");
+      exit(-1);
+    }
   } else {
     // Check the full response MsgBuffer
     for (size_t i = 0; i < FLAGS_msg_size; i++) {
@@ -406,9 +404,9 @@ int main(int argc, char **argv) {
                   "Too few ring buffers");
 
   erpc::Nexus nexus(erpc::get_uri_for_process(FLAGS_process_id),
-                    FLAGS_numa_node, 4);
-  nexus.register_req_func(kAppReqType, req_handler, erpc::ReqFuncType::kBackground);
-  nexus.register_req_func(kPingReqHandlerType, ping_req_handler, erpc::ReqFuncType::kBackground);
+                    FLAGS_numa_node, 0);
+  nexus.register_req_func(kAppReqType, req_handler);
+  nexus.register_req_func(kPingReqHandlerType, ping_req_handler);
 
   std::vector<std::thread> threads(FLAGS_num_threads);
   auto *app_stats = new app_stats_t[FLAGS_num_threads];

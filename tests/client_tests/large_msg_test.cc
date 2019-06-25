@@ -50,7 +50,7 @@ void req_handler(ReqHandle *req_handle, void *_c) {
   auto &resp = req_handle->dyn_resp_msgbuf;
   resp = c->rpc->alloc_msg_buffer_or_die(app_hdr->resp_size);
 
-  *reinterpret_cast<app_hdr_t *>(resp.buf) = *app_hdr;  // Coppy app req header
+  *reinterpret_cast<app_hdr_t *>(resp.buf) = *app_hdr;  // Copy app req header
   memset(resp.buf + sizeof(app_hdr_t), app_hdr->byte_contents,
          app_hdr->resp_size - sizeof(app_hdr_t));
 
@@ -70,7 +70,7 @@ void req_handler(ReqHandle *req_handle, void *_c) {
 void cont_func(void *_c, void *_tag) {
   auto *c = static_cast<AppContext *>(_c);
   auto tag = reinterpret_cast<size_t>(_tag);
-  
+
   const MsgBuffer &req_msgbuf = c->req_msgbufs[tag];
   const MsgBuffer &resp_msgbuf = c->resp_msgbufs[tag];
   const auto *app_hdr = reinterpret_cast<app_hdr_t *>(req_msgbuf.buf);

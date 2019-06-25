@@ -79,6 +79,7 @@ void generic_test_func(Nexus *nexus, size_t) {
   for (size_t iter = 0; iter < 2; iter++) {
     c.num_rpc_resps = 0;
 
+    test_printf("Client: Iteration %zu.\n", iter);
     size_t iter_req_i = 0;  // Request MsgBuffer index in an iteration
 
     for (size_t sess_i = 0; sess_i < config_num_sessions; sess_i++) {
