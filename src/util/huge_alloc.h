@@ -119,10 +119,8 @@ class HugeAlloc {
   Buffer alloc(size_t size);
 
   /// Free a Buffer
-  inline void free_buf(Buffer buffer) {//}, size_t num_pkts) {
+  inline void free_buf(Buffer buffer) {
     assert(buffer.buf != nullptr);
-    //buffer.buf -= num_pkts * sizeof(pkthdr_t);
-    //assert(buffer.buf != nullptr);
 
     size_t size_class = get_class(buffer.class_size);
     assert(class_max_size(size_class) == buffer.class_size);
