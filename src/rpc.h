@@ -193,8 +193,8 @@ class Rpc {
   /// Free a MsgBuffer created by alloc_msg_buffer()
   inline void free_msg_buffer(MsgBuffer msg_buffer) {
     lock_cond(&huge_alloc_lock);
-    huge_alloc->free_buf(msg_buffer.buffer,
-                         (msg_buffer.max_num_pkts - msg_buffer.num_pkts));
+    huge_alloc->free_buf(msg_buffer.buffer);
+    //, (msg_buffer.max_num_pkts - msg_buffer.num_pkts));
     unlock_cond(&huge_alloc_lock);
   }
 

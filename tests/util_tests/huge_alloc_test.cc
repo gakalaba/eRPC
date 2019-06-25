@@ -142,7 +142,7 @@ TEST(HugeAllocTest, VarMBChunksSingleRun) {
 
     // Free all allocated hugepages in random order
     std::random_shuffle(buffer_vec.begin(), buffer_vec.end());
-    for (erpc::Buffer buffer : buffer_vec) alloc->free_buf(buffer, 0);
+    for (erpc::Buffer buffer : buffer_vec) alloc->free_buf(buffer);//, 0);
   }
 
   delete alloc;

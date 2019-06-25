@@ -206,7 +206,7 @@ TEST(MultiLargeRpcOneSession, Background) {
 }
 
 TEST(MultiLargeRpcMultiSession, Foreground) {
-  assert(erpc::is_log_level_reasonable());
+  //assert(erpc::is_log_level_reasonable());
   config_num_iters = 2;
   config_num_sessions = 4;
   config_rpcs_per_session = kSessionReqWindow;
@@ -215,7 +215,7 @@ TEST(MultiLargeRpcMultiSession, Foreground) {
 }
 
 TEST(MultiLargeRpcMultiSession, Background) {
-  assert(erpc::is_log_level_reasonable());
+  //assert(erpc::is_log_level_reasonable());
   config_num_iters = 2;
   config_num_sessions = 4;
   config_rpcs_per_session = kSessionReqWindow;
