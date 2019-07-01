@@ -164,12 +164,6 @@ class Rpc {
     return msg_buffer;
   }
 
-
-  inline size_t ANJA(void) {
-    return 1;
-  }
-
-
   /**
    * @brief Resize a MsgBuffer to fit a request or response
    *

@@ -11,18 +11,9 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
                                MsgBuffer *req_msgbuf, MsgBuffer *resp_msgbuf,
                                erpc_cont_func_t cont_func, void *tag,
                                size_t cont_etid) {
-  // allocate the crypto request message buffer
-  MsgBuffer c_req_msgbuf = alloc_msg_buffer(req_msgbuf->max_data_size);
-  assert(c_req_msgbuf.is_valid());
-  assert(req_msgbuf->is_valid());
-  // copy over the data bytes
-  memcpy(c_req_msgbuf.buf, req_msgbuf->buf, req_msgbuf->data_size);
-  assert(c_req_msgbuf.is_valid());
-  assert(req_msgbuf->is_valid());
-
   // When called from a background thread, enqueue to the foreground thread
   if (unlikely(!in_dispatch())) {
-    auto req_args = enq_req_args_t(session_num, req_type, &c_req_msgbuf,
+    auto req_args = enq_req_args_t(session_num, req_type, req_msgbuf,
                                    resp_msgbuf, cont_func, tag, get_etid());
     bg_queues._enqueue_request.unlocked_push(req_args);
     return;
@@ -31,7 +22,6 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
   // If we're here, we're in the dispatch thread
   Session *session = session_vec[static_cast<size_t>(session_num)];
   assert(session->is_connected());  // User is notified before we disconnect
-
 #ifdef SECURE
 
   // Encrypt the buffer
@@ -68,7 +58,7 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
   // If a free sslot is unavailable, save to session backlog
   if (unlikely(session->client_info.sslot_free_vec.size() == 0)) {
     session->client_info.enq_req_backlog.emplace(session_num, req_type,
-                                                 &c_req_msgbuf, resp_msgbuf,
+                                                 req_msgbuf, resp_msgbuf,
                                                  cont_func, tag, cont_etid);
     return;
   }
@@ -77,7 +67,7 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
   size_t sslot_i = session->client_info.sslot_free_vec.pop_back();
   SSlot &sslot = session->sslot_arr[sslot_i];
   assert(sslot.tx_msgbuf == nullptr);  // Previous response was received
-  sslot.tx_msgbuf = &c_req_msgbuf;        // Mark the request as active/incomplete
+  sslot.tx_msgbuf = req_msgbuf;        // Mark the request as active/incomplete
   sslot.cur_req_num += kSessionReqWindow;  // Move to next request
 
   auto &ci = sslot.client_info;
@@ -92,7 +82,7 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
   ci.cont_etid = cont_etid;
 
   // Fill in packet 0's header
-  pkthdr_t *pkthdr_0 = c_req_msgbuf.get_pkthdr_0();
+  pkthdr_t *pkthdr_0 = req_msgbuf->get_pkthdr_0();
   pkthdr_0->req_type = req_type;
   pkthdr_0->msg_size = req_msgbuf->data_size;
   pkthdr_0->dest_session_num = session->remote_session_num;
@@ -103,7 +93,7 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
   // Fill in any non-zeroth packet headers, using pkthdr_0 as the base.
   if (unlikely(req_msgbuf->num_pkts > 1)) {
     for (size_t i = 1; i < req_msgbuf->num_pkts; i++) {
-      pkthdr_t *pkthdr_i = c_req_msgbuf.get_pkthdr_n(i);
+      pkthdr_t *pkthdr_i = req_msgbuf->get_pkthdr_n(i);
       memcpy(pkthdr_i, pkthdr_0, sizeof(pkthdr_t));
       pkthdr_i->pkt_num = i;
     }
