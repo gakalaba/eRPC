@@ -183,7 +183,7 @@ void kv_req_handler(erpc::ReqHandle *req_handle, void *_context) {
   auto *c = static_cast<ServerContext *>(_context);
 
   const erpc::MsgBuffer *req = req_handle->get_req_msgbuf();
-  size_t req_size = req->get_app_data_size();
+  size_t req_size = req->get_data_size();
 
   erpc::MsgBuffer &resp = req_handle->pre_resp_msgbuf;
   c->rpc->resize_msg_buffer(&resp, sizeof(Value));  // sizeof(Result) is smaller
@@ -365,14 +365,14 @@ void kv_cont_func(void *_context, void *_ws_i) {
 
   if (c->is_set_arr[ws_i]) {
     // SET response
-    assert(resp->get_app_data_size() == sizeof(Result));
+    assert(resp->get_data_size() == sizeof(Result));
     auto result = *reinterpret_cast<Result *>(resp->buf);
     if (result == Result::kSetSuccess) c->stats.num_set_success++;
   } else {
     // GET response
-    assert(resp->get_app_data_size() == sizeof(Value) ||
-           resp->get_app_data_size() == sizeof(Result));
-    if (resp->get_app_data_size() == sizeof(Value)) {
+    assert(resp->get_data_size() == sizeof(Value) ||
+           resp->get_data_size() == sizeof(Result));
+    if (resp->get_data_size() == sizeof(Value)) {
       Value *value = reinterpret_cast<Value *>(resp->buf);
       _unused(value);
       assert(value->val_frag[0] == c->key_arr[ws_i].key_frag[0]);

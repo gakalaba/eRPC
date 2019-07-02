@@ -11,6 +11,10 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
                                MsgBuffer *req_msgbuf, MsgBuffer *resp_msgbuf,
                                erpc_cont_func_t cont_func, void *tag,
                                size_t cont_etid) {
+  
+  // Fill in encrypted application data
+  memcpy(req_msgbuf->c_buf, req_msgbuf->buf, req_msgbuf->max_data_size);
+
   // When called from a background thread, enqueue to the foreground thread
   if (unlikely(!in_dispatch())) {
     auto req_args = enq_req_args_t(session_num, req_type, req_msgbuf,
@@ -45,7 +49,7 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
       session->secret[21], session->secret[22], session->secret[23],
       session->secret[24]);
   int encrypt_res = aes_gcm_encrypt(
-      req_msgbuf->buf, req_msgbuf->get_app_data_size(), session->secret);
+      req_msgbuf->buf, req_msgbuf->get_data_size(), session->secret);
 
   // fprintf(stderr, "=====> Msg Byte encrypted: %d\n", req_msgbuf->buf[0]);
 
@@ -169,7 +173,7 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
 
 #ifdef SECURE
     int crypto_res = aes_gcm_decrypt(
-        req_msgbuf.buf, req_msgbuf.get_app_data_size(), sslot->session->secret);
+        req_msgbuf.buf, req_msgbuf.get_data_size(), sslot->session->secret);
 
     _unused(crypto_res);
 
@@ -196,7 +200,7 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
 
     // #ifdef SECURE
     //     int crypto_res =
-    //       aes_gcm_decrypt(req_msgbuf.buf, req_msgbuf.get_app_data_size());
+    //       aes_gcm_decrypt(req_msgbuf.buf, req_msgbuf.get_data_size());
 
     //     _unused(crypto_res);
     //     assert(crypto_res == 0);
@@ -311,7 +315,7 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
 #ifdef SECURE
 
     int decrypt_res = aes_gcm_decrypt(
-        req_msgbuf.buf, req_msgbuf.get_app_data_size(), sslot->session->secret);
+        req_msgbuf.buf, req_msgbuf.get_data_size(), sslot->session->secret);
 
     _unused(decrypt_res);
 

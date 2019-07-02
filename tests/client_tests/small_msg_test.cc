@@ -30,7 +30,7 @@ void req_handler(ReqHandle *req_handle, void *_c) {
   }
 
   const MsgBuffer *req_msgbuf = req_handle->get_req_msgbuf();
-  size_t resp_size = req_msgbuf->get_app_data_size();
+  size_t resp_size = req_msgbuf->get_data_size();
   Rpc<CTransport>::resize_msg_buffer(&req_handle->pre_resp_msgbuf, resp_size);
   memcpy(req_handle->pre_resp_msgbuf.buf, req_msgbuf->buf, resp_size);
   c->rpc->enqueue_response(req_handle, &req_handle->pre_resp_msgbuf);
@@ -42,7 +42,7 @@ void req_handler(ReqHandle *req_handle, void *_c) {
 void cont_func(void *_c, void *_tag) {
   auto *c = static_cast<AppContext *>(_c);
   size_t tag = reinterpret_cast<size_t>(_tag);
-  ASSERT_EQ(c->resp_msgbufs[tag].get_app_data_size(), config_msg_size);
+  ASSERT_EQ(c->resp_msgbufs[tag].get_data_size(), config_msg_size);
 
   for (size_t i = 0; i < config_msg_size; i++) {
     ASSERT_EQ(c->resp_msgbufs[tag].buf[i], static_cast<uint8_t>(tag));

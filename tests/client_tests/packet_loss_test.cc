@@ -33,7 +33,7 @@ void req_handler(ReqHandle *req_handle, void *_c) {
   if (config_num_bg_threads > 0) assert(c->rpc->in_background());
 
   const MsgBuffer *req_msgbuf = req_handle->get_req_msgbuf();
-  size_t resp_size = req_msgbuf->get_app_data_size();
+  size_t resp_size = req_msgbuf->get_data_size();
 
   req_handle->dyn_resp_msgbuf = c->rpc->alloc_msg_buffer_or_die(resp_size);
   size_t user_alloc_tot = c->rpc->get_stat_user_alloc_tot();
@@ -55,9 +55,9 @@ void cont_func(void *_c, void *_tag) {
   auto tag = reinterpret_cast<size_t>(_tag);
   const MsgBuffer &resp_msgbuf = c->resp_msgbufs[tag];
   test_printf("Client: Received response of length %zu.\n",
-              resp_msgbuf.get_app_data_size());
+              resp_msgbuf.get_data_size());
 
-  for (size_t i = 0; i < resp_msgbuf.get_app_data_size(); i++) {
+  for (size_t i = 0; i < resp_msgbuf.get_data_size(); i++) {
     ASSERT_EQ(resp_msgbuf.buf[i], static_cast<uint8_t>(tag));
   }
 

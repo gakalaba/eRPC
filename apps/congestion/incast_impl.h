@@ -43,7 +43,7 @@ void cont_incast(void *, void *);  // Forward declaration
 // Send an incast request using this MsgBuffer
 void send_req_incast(AppContext *c, size_t msgbuf_idx) {
   erpc::MsgBuffer &req_msgbuf = c->req_msgbuf[msgbuf_idx];
-  assert(req_msgbuf.get_app_data_size() == FLAGS_incast_req_size);
+  assert(req_msgbuf.get_data_size() == FLAGS_incast_req_size);
 
   if (kAppVerbose) {
     printf("congestion: Thread %zu sending incast req using msgbuf_idx %zu.\n",
@@ -79,7 +79,7 @@ void cont_incast(void *_context, size_t _msgbuf_idx) {
     printf("congestion: Received response for msgbuf %zu.\n", msgbuf_idx);
   }
 
-  assert(resp_msgbuf->get_app_data_size() == FLAGS_incast_resp_size);
+  assert(resp_msgbuf->get_data_size() == FLAGS_incast_resp_size);
   erpc::rt_assert(resp_msgbuf->buf[0] == kAppDataByte);  // Touch
 
   send_req_incast(c, msgbuf_idx);

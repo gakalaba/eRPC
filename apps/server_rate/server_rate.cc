@@ -84,7 +84,7 @@ inline void send_req(ClientContext &c, size_t ws_i) {
 void app_cont_func(void *_context, void *_ws_i) {
   auto *c = static_cast<ClientContext *>(_context);
   auto ws_i = reinterpret_cast<size_t>(_ws_i);
-  assert(c->resp_msgbuf[ws_i].get_app_data_size() == FLAGS_resp_size);
+  assert(c->resp_msgbuf[ws_i].get_data_size() == FLAGS_resp_size);
 
   double req_lat_us =
       erpc::to_usec(erpc::rdtsc() - c->start_tsc[ws_i], c->rpc->get_freq_ghz());

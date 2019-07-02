@@ -76,13 +76,13 @@ void cont_func(void *_c, void *_tag) {
   const auto *app_hdr = reinterpret_cast<app_hdr_t *>(req_msgbuf.buf);
 
   test_printf("Client: Received response. Req/resp length %zu/%zu.\n",
-              req_msgbuf.get_app_data_size(), resp_msgbuf.get_app_data_size());
+              req_msgbuf.get_data_size(), resp_msgbuf.get_data_size());
 
   // Check the response's header and contents
   assert(memcmp(req_msgbuf.buf, resp_msgbuf.buf, sizeof(app_hdr_t)) == 0);
 
-  assert(resp_msgbuf.get_app_data_size() == app_hdr->resp_size);
-  for (size_t i = sizeof(app_hdr_t); i < resp_msgbuf.get_app_data_size(); i++) {
+  assert(resp_msgbuf.get_data_size() == app_hdr->resp_size);
+  for (size_t i = sizeof(app_hdr_t); i < resp_msgbuf.get_data_size(); i++) {
     assert(resp_msgbuf.buf[i] == app_hdr->byte_contents);
   }
 

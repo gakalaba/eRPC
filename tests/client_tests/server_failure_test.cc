@@ -26,7 +26,7 @@ void req_handler(ReqHandle *req_handle, void *_c) {
   auto *c = static_cast<AppContext *>(_c);
 
   const MsgBuffer *req_msgbuf = req_handle->get_req_msgbuf();
-  size_t resp_size = req_msgbuf->get_app_data_size();
+  size_t resp_size = req_msgbuf->get_data_size();
 
   req_handle->dyn_resp_msgbuf = c->rpc->alloc_msg_buffer_or_die(resp_size);
   size_t user_alloc_tot = c->rpc->get_stat_user_alloc_tot();
@@ -48,7 +48,7 @@ void cont_func(void *_c, void *_tag) {
   size_t tag = reinterpret_cast<size_t>(_tag);
   const MsgBuffer &resp_msgbuf = c->resp_msgbufs[tag];
 
-  assert(resp_msgbuf.get_app_data_size() == 0);
+  assert(resp_msgbuf.get_data_size() == 0);
   c->num_rpc_resps++;
 }
 

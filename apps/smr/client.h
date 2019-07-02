@@ -95,7 +95,7 @@ void client_cont(void *_context, void *) {
     c->client.req_us_vec.clear();
   }
 
-  if (likely(c->client.resp_msgbuf.get_app_data_size() > 0)) {
+  if (likely(c->client.resp_msgbuf.get_data_size() > 0)) {
     // The RPC was successful
     auto *client_resp =
         reinterpret_cast<client_resp_t *>(c->client.resp_msgbuf.buf);

@@ -155,7 +155,7 @@ void req_handler(erpc::ReqHandle *req_handle, void *_context) {
   c->stat_req_rx_tot++;
 
   const erpc::MsgBuffer *req_msgbuf = req_handle->get_req_msgbuf();
-  assert(req_msgbuf->get_app_data_size() == FLAGS_msg_size);
+  assert(req_msgbuf->get_data_size() == FLAGS_msg_size);
 
   // RX ring request optimization knob
   if (kAppOptDisableRxRingReq) {
@@ -197,7 +197,7 @@ void app_cont_func(void *_context, void *_tag) {
 
   BatchContext &bc = c->batch_arr[tag.s.batch_i];
   const erpc::MsgBuffer &resp_msgbuf = bc.resp_msgbuf[tag.s.msgbuf_i];
-  assert(resp_msgbuf.get_app_data_size() == FLAGS_msg_size);
+  assert(resp_msgbuf.get_data_size() == FLAGS_msg_size);
 
   if (!kAppPayloadCheck) {
     // Do a cheap check, but touch the response MsgBuffer

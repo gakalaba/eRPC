@@ -37,13 +37,13 @@ class MsgBuffer {
  private:
   /// Return a pointer to the pre-appended packet header of this MsgBuffer
   inline pkthdr_t *get_pkthdr_0() const {
-    return reinterpret_cast<pkthdr_t *>(buf - sizeof(pkthdr_t));
+    return reinterpret_cast<pkthdr_t *>(c_buf - sizeof(pkthdr_t));
   }
 
   /// Return a pointer to the nth packet header of this MsgBuffer.
   /// get_pkthdr_0() is more efficient for retrieving the zeroth header.
   inline pkthdr_t *get_pkthdr_n(size_t n) const {
-    return reinterpret_cast<pkthdr_t *>(buf - (n + 1) * sizeof(pkthdr_t));
+    return reinterpret_cast<pkthdr_t *>(c_buf - (n + 1) * sizeof(pkthdr_t));
   }
 
   ///@{ Accessors for the packet header
@@ -95,17 +95,21 @@ class MsgBuffer {
   /// Construct a MsgBuffer with a dynamic Buffer allocated by eRPC.
   /// The zeroth packet header is stored at \p buffer.buf. \p buffer must have
   /// space for at least \p max_data_bytes, and \p max_num_pkts packet headers.
-  MsgBuffer(Buffer buffer, size_t max_data_size, size_t max_num_pkts)
+  MsgBuffer(Buffer buffer, Buffer c_buffer, size_t max_data_size,
+            size_t max_num_pkts)
       : buffer(buffer),
+        c_buffer(c_buffer),
         max_data_size(max_data_size),
         data_size(max_data_size),
         max_num_pkts(max_num_pkts),
         num_pkts(max_num_pkts),
+        c_buf(c_buffer.buf + max_num_pkts * sizeof(pkthdr_t)),
         buf(buffer.buf + max_num_pkts * sizeof(pkthdr_t)) {
-    assert(buffer.buf != nullptr);  // buffer must be valid
+    assert(buffer.buf != nullptr);    // buffer must be valid
+    assert(c_buffer.buf != nullptr);  // crypto buffer must be valid
     // data_size can be 0
     assert(max_num_pkts >= 1);
-    assert(buffer.class_size >=
+    assert(c_buffer.class_size >=
            max_data_size + max_num_pkts * sizeof(pkthdr_t));
 
     pkthdr_t *pkthdr_0 = this->get_pkthdr_0();
@@ -153,24 +157,21 @@ class MsgBuffer {
    * Return the current amount of app data in this message buffer. This can be
    * smaller than it's maximum data capacity due to resizing.
    */
-  inline size_t get_app_data_size() const {
-#ifdef SECURE
-    return data_size - CRYPTO_HDR_LEN;
-#else
-    return data_size;
-#endif
-  }
+  inline size_t get_data_size() const { return data_size; }
 
  private:
   /// The optional backing hugepage buffer. buffer.buf points to the zeroth
   /// packet header, i.e., not application data.
   Buffer buffer;
-
+  Buffer c_buffer;
+  
   // Size info
   size_t max_data_size;  ///< Max data bytes in the MsgBuffer
   size_t data_size;      ///< Current data bytes in the MsgBuffer
   size_t max_num_pkts;   ///< Max number of packets in this MsgBuffer
   size_t num_pkts;       ///< Current number of packets in this MsgBuffer
+
+  uint8_t *c_buf;
 
  public:
   /// Pointer to the first application data byte. The message buffer is invalid
