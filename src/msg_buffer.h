@@ -140,7 +140,6 @@ class MsgBuffer {
   inline void resize(size_t new_data_size, size_t new_num_pkts) {
     assert(new_data_size <= max_data_size);
     assert(new_num_pkts <= max_num_pkts);
-
     data_size = new_data_size;
     num_pkts = new_num_pkts;
   }
@@ -164,7 +163,7 @@ class MsgBuffer {
   /// packet header, i.e., not application data.
   Buffer buffer;
   Buffer c_buffer;
-  
+
   // Size info
   size_t max_data_size;  ///< Max data bytes in the MsgBuffer
   size_t data_size;      ///< Current data bytes in the MsgBuffer

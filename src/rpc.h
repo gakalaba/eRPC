@@ -152,11 +152,11 @@ class Rpc {
     lock_cond(&huge_alloc_lock);
     Buffer buffer =
         huge_alloc->alloc(max_num_pkts * sizeof(pkthdr_t) + max_data_size);
-    Buffer c_buffer = 
+    Buffer c_buffer =
         huge_alloc->alloc(max_num_pkts * sizeof(pkthdr_t) + max_data_size);
     unlock_cond(&huge_alloc_lock);
 
-    if (unlikely(buffer.buf == nullptr) || unlikely(c_buffer.buf == nullptr)) {
+    if (unlikely(buffer.buf == nullptr || c_buffer.buf == nullptr)) {
       MsgBuffer msg_buffer;
       msg_buffer.buf = nullptr;
       return msg_buffer;
