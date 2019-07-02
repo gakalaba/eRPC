@@ -181,10 +181,6 @@ class Rpc {
                                        size_t new_data_size) {
     assert(msg_buffer->is_valid());  // Can be fake
 
-#ifdef SECURE
-    new_data_size += CRYPTO_HDR_LEN;
-#endif
-
     assert(new_data_size <= msg_buffer->max_data_size);
 
     // Avoid division for single-packet data sizes

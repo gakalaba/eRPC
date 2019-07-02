@@ -185,26 +185,10 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
   } else {
 // For background request handlers, we need a RX ring--independent copy of
 // the request. The allocated req_msgbuf is freed by the background thread.
-#ifdef SECURE
-    // Dirty hack, ideally there should be two alloc_msg_buffer's
-    // One that transparently allocates a SECURE_HEADER, used by apps
-    // And another that allocates the desired message bytes, used by the
-    // transport layer
-    req_msgbuf = alloc_msg_buffer(pkthdr->msg_size - CRYPTO_HDR_LEN);
-#else
     req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
-#endif
     assert(req_msgbuf.buf != nullptr);
     memcpy(req_msgbuf.get_pkthdr_0(), pkthdr,
            pkthdr->msg_size + sizeof(pkthdr_t));
-
-    // #ifdef SECURE
-    //     int crypto_res =
-    //       aes_gcm_decrypt(req_msgbuf.buf, req_msgbuf.get_data_size());
-
-    //     _unused(crypto_res);
-    //     assert(crypto_res == 0);
-    // #endif
 
     submit_bg_req_st(sslot);
     return;
@@ -273,12 +257,7 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
     // cur_req_num as unavailable.
     bury_resp_msgbuf_server_st(sslot);
 
-#ifdef SECURE
-    req_msgbuf = alloc_msg_buffer(pkthdr->msg_size - CRYPTO_HDR_LEN);
-
-#else
     req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
-#endif /* SECURE */
 
     assert(req_msgbuf.buf != nullptr);
     *(req_msgbuf.get_pkthdr_0()) = *pkthdr;
