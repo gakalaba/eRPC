@@ -260,6 +260,7 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
     req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
 
     assert(req_msgbuf.buf != nullptr);
+    // assert(req_msgbuf.c_buf != nullptr) ???
     *(req_msgbuf.get_pkthdr_0()) = *pkthdr;
 
     // Update sslot tracking

@@ -192,6 +192,7 @@ class Rpc {
   inline void free_msg_buffer(MsgBuffer msg_buffer) {
     lock_cond(&huge_alloc_lock);
     huge_alloc->free_buf(msg_buffer.buffer);
+    huge_alloc->free_buf(msg_buffer.c_buffer);
     unlock_cond(&huge_alloc_lock);
   }
 
@@ -833,7 +834,7 @@ class Rpc {
                                   const pkthdr_t *pkthdr) {
     size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
     size_t to_copy = std::min(TTr::kMaxDataPerPkt, pkthdr->msg_size - offset);
-    memcpy(&msgbuf->buf[offset], pkthdr + 1, to_copy);  // From end of pkthdr
+    memcpy(&msgbuf->c_buf[offset], pkthdr + 1, to_copy);  // From end of pkthdr
   }
 
   /**
