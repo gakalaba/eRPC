@@ -143,7 +143,6 @@ class MsgBuffer {
   inline void resize(size_t new_data_size, size_t new_num_pkts) {
     assert(new_data_size <= max_data_size);
     assert(new_num_pkts <= max_num_pkts);
-
     data_size = new_data_size;
     num_pkts = new_num_pkts;
   }
