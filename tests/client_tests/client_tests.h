@@ -73,13 +73,13 @@ size_t get_rand_msg_size(FastRand *fast_rand, const Rpc<CTransport> *rpc) {
   if (fast_rand->next_u32() % 100 < X) {
     // Choose a single-packet message
     uint32_t sample = fast_rand->next_u32();
-    return (sample % rpc->_get_max_data_per_pkt()) + 1;
+    return (sample % rpc->get_max_data_per_pkt()) + 1;
   } else {
     if (fast_rand->next_u32() % 100 < 80) {
       // Choose a message size that fits in 1 to 10 packets
       uint32_t num_pkts = (fast_rand->next_u32() % 10) + 1;
       return (fast_rand->next_u32() %
-              (num_pkts * rpc->_get_max_data_per_pkt())) +
+              (num_pkts * rpc->get_max_data_per_pkt())) +
              1;
     } else {
       // Choose any message size up to the max size

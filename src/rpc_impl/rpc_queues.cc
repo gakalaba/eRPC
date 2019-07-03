@@ -73,8 +73,7 @@ void Rpc<TTr>::process_bg_queues_enqueue_response_st() {
 
   for (size_t i = 0; i < cmds_to_process; i++) {
     enq_resp_args_t enq_resp_args = queue.unlocked_pop();
-    enqueue_response(enq_resp_args.req_handle, enq_resp_args.resp_msgbuf,
-                     false);
+    enqueue_response(enq_resp_args.req_handle, enq_resp_args.resp_msgbuf);
   }
 }
 

@@ -8,10 +8,9 @@ namespace erpc {
 //
 // So sslot->rx_msgbuf may or may not be valid at this point.
 template <class TTr>
-void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf,
-                                bool encrypt) {
+void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
   // Fill in encrypted response data
-  memcpy(resp_msgbuf->c_buf, resp_msgbuf->buf, resp_msgbuf->max_data_size);
+  memcpy(resp_msgbuf->encrypted_buf, resp_msgbuf->buf, resp_msgbuf->max_data_size);
 
   SSlot *sslot = static_cast<SSlot *>(req_handle);
   Session *session = sslot->session;
@@ -137,7 +136,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
 
     // Hdr 0 was copied earlier, other headers are unneeded, so copy just data.
     const size_t pkt_idx = resp_ntoi(pkthdr->pkt_num, req_msgbuf->num_pkts);
-    copy_data_to_msgbuf(resp_msgbuf, pkt_idx, pkthdr);
+    copy_data_to_encrypted_msgbuf(resp_msgbuf, pkt_idx, pkthdr);
 
     if (ci.num_rx != wire_pkts(req_msgbuf, resp_msgbuf)) return;
     // Else fall through to invoke continuation

@@ -13,7 +13,7 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
                                size_t cont_etid) {
   
   // Fill in encrypted application data
-  memcpy(req_msgbuf->c_buf, req_msgbuf->buf, req_msgbuf->max_data_size);
+  memcpy(req_msgbuf->encrypted_buf, req_msgbuf->buf, req_msgbuf->max_data_size);
 
   // When called from a background thread, enqueue to the foreground thread
   if (unlikely(!in_dispatch())) {
@@ -228,7 +228,7 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
     //
     // req_msgbuf could be buried if we have received the entire request and
     // queued the response, so directly compute number of packets in request.
-    if (pkthdr->pkt_num != _data_size_to_num_pkts(pkthdr->msg_size) - 1) {
+    if (pkthdr->pkt_num != data_size_to_num_pkts(pkthdr->msg_size) - 1) {
       ERPC_REORDER("%s: Re-sending credit return.\n", issue_msg);
       enqueue_cr_st(sslot, pkthdr);  // Header only, so tx_flush uneeded
       return;
@@ -260,7 +260,7 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
     req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
 
     assert(req_msgbuf.buf != nullptr);
-    // assert(req_msgbuf.c_buf != nullptr) ???
+    // assert(req_msgbuf.encrypted_buf != nullptr) ???
     *(req_msgbuf.get_pkthdr_0()) = *pkthdr;
 
     // Update sslot tracking
@@ -275,7 +275,7 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   if (pkthdr->pkt_num != req_msgbuf.num_pkts - 1) enqueue_cr_st(sslot, pkthdr);
 
   // Header 0 was copied earlier. Request packet's index = packet number.
-  copy_data_to_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);
+  copy_data_to_encrypted_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);
 
   // Invoke the request handler iff we have all the request packets
   if (sslot->server_info.num_rx != req_msgbuf.num_pkts) return;

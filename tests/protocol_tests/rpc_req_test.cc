@@ -53,7 +53,7 @@ TEST_F(RpcTest, process_small_req_st) {
 }
 
 TEST_F(RpcTest, process_large_req_one_st) {
-  const size_t num_pkts_in_req = rpc->num_pkts_for_app_data_size(kTestLargeMsgSize);
+  const size_t num_pkts_in_req = rpc->data_size_to_num_pkts(kTestLargeMsgSize);
   ASSERT_GT(num_pkts_in_req, 10);
 
   const auto server = get_local_endpoint();
