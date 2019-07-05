@@ -44,7 +44,7 @@ TEST_F(RpcClientKickTest, kick_st_no_credits) {
 TEST_F(RpcClientKickTest, kick_st_all_request_no_response) {
   rpc->enqueue_request(0, kTestReqType, &req, &resp, cont_func, kTestTag);
   assert(clt_session->client_info.credits == 0);
-  sslot_0->client_info.num_tx = rpc->data_size_to_num_pkts(req.get_data_size());
+  sslot_0->client_info.num_tx = rpc->data_size_to_num_pkts(req.data_size);
   sslot_0->client_info.num_rx = sslot_0->client_info.num_tx - kSessionCredits;
   ASSERT_DEATH(rpc->kick_req_st(sslot_0), ".*");
 }
@@ -105,7 +105,7 @@ TEST_F(RpcClientKickTest, kick_st_rfr_pkts) {
   sslot_0->client_info.resp_msgbuf = &resp;
 
   // Pretend we have received the first response
-  const size_t req_npkts = rpc->data_size_to_num_pkts(req.get_data_size());
+  const size_t req_npkts = rpc->data_size_to_num_pkts(req.data_size);
   sslot_0->client_info.num_tx = req_npkts;
   sslot_0->client_info.num_rx = req_npkts;
   clt_session->client_info.credits = kSessionCredits;

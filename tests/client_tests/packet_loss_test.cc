@@ -100,7 +100,7 @@ void generic_test_func(Nexus *nexus, size_t) {
       // Don't use very large requests because we drop a lot of packets
       size_t req_pkts =
           (kSessionCredits * 2) + (c.fastrand.next_u32() % kSessionCredits);
-      size_t req_size = rpc->max_app_data_size_for_packets(req_pkts);
+      size_t req_size = req_pkts * rpc->get_max_data_per_pkt();
 
       rpc->resize_msg_buffer(&cur_req_msgbuf, req_size);
       memset(cur_req_msgbuf.buf, iter_req_i, req_size);

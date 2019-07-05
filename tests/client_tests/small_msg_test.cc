@@ -70,7 +70,7 @@ void generic_test_func(Nexus *nexus, size_t) {
   c.req_msgbufs.resize(tot_reqs_per_iter);
   c.resp_msgbufs.resize(tot_reqs_per_iter);
   for (size_t i = 0; i < tot_reqs_per_iter; i++) {
-    const size_t max_data_pkt = rpc->max_app_data_size_for_packets(1u);
+    const size_t max_data_pkt = rpc->get_max_data_per_pkt();
     c.req_msgbufs[i] = rpc->alloc_msg_buffer_or_die(max_data_pkt);
     c.resp_msgbufs[i] = rpc->alloc_msg_buffer_or_die(max_data_pkt);
   }
@@ -132,7 +132,7 @@ TEST(OneSmallRpc, Foreground) {
   config_num_sessions = 1;
   config_num_bg_threads = 0;
   config_rpcs_per_session = 1;
-  config_msg_size = Rpc<CTransport>::max_app_data_size_for_packets(1u);
+  config_msg_size = Rpc<CTransport>::get_max_data_per_pkt();
   launch_helper();
 }
 
@@ -140,7 +140,7 @@ TEST(OneSmallRpc, Background) {
   config_num_sessions = 1;
   config_num_bg_threads = 1;
   config_rpcs_per_session = 1;
-  config_msg_size = Rpc<CTransport>::max_app_data_size_for_packets(1u);
+  config_msg_size = Rpc<CTransport>::get_max_data_per_pkt();
   launch_helper();
 }
 
@@ -148,7 +148,7 @@ TEST(MultiSmallRpcOneSession, Foreground) {
   config_num_sessions = 1;
   config_num_bg_threads = 0;
   config_rpcs_per_session = kSessionReqWindow;
-  config_msg_size = Rpc<CTransport>::max_app_data_size_for_packets(1u);
+  config_msg_size = Rpc<CTransport>::get_max_data_per_pkt();
   launch_helper();
 }
 
@@ -156,7 +156,7 @@ TEST(MultiSmallRpcOneSession, Background) {
   config_num_sessions = 1;
   config_num_bg_threads = 2;
   config_rpcs_per_session = kSessionReqWindow;
-  config_msg_size = Rpc<CTransport>::max_app_data_size_for_packets(1u);
+  config_msg_size = Rpc<CTransport>::get_max_data_per_pkt();
   launch_helper();
 }
 
@@ -164,7 +164,7 @@ TEST(MultiSmallRpcMultiSession, Foreground) {
   config_num_sessions = 4;
   config_num_bg_threads = 0;
   config_rpcs_per_session = kSessionReqWindow;
-  config_msg_size = Rpc<CTransport>::max_app_data_size_for_packets(1u);
+  config_msg_size = Rpc<CTransport>::get_max_data_per_pkt();
   launch_helper();
 }
 
@@ -172,7 +172,7 @@ TEST(MultiSmallRpcMultiSession, Background) {
   config_num_sessions = 4;
   config_num_bg_threads = 3;
   config_rpcs_per_session = kSessionReqWindow;
-  config_msg_size = Rpc<CTransport>::max_app_data_size_for_packets(1u);
+  config_msg_size = Rpc<CTransport>::get_max_data_per_pkt();
   launch_helper();
 }
 

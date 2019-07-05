@@ -143,13 +143,6 @@ void primary_cont_func(void *_c, void *_tag) {
   size_t req_size_cp = srv_req_info->req_size_cp;
   ReqHandle *req_handle_cp = srv_req_info->req_handle_cp;
 
-#ifdef SECURE
-  // FIXME key
-  aes_gcm_decrypt(srv_req_info->req_msgbuf_pb.buf,
-                  srv_req_info->req_msgbuf_pb.get_data_size(),
-                  erpc::gcm_key);
-#endif
-
   assert(resp_msgbuf_pb.get_data_size() == req_size_cp);
 
   // Check the response from server #1
@@ -216,8 +209,7 @@ void client_cont_func(void *_c, void *_tag) {
   const MsgBuffer &resp_msgbuf = c->resp_msgbufs[msgbuf_i];
 
   test_printf("Client [Rpc %u]: Received response for req %u, length = %zu.\n",
-              c->rpc->get_rpc_id(), tag.s.req_i,
-              resp_msgbuf.get_data_size());
+              c->rpc->get_rpc_id(), tag.s.req_i, resp_msgbuf.get_data_size());
 
   // Check the response
   ASSERT_EQ(resp_msgbuf.get_data_size(), req_size);

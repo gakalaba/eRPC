@@ -105,7 +105,7 @@ TEST_F(RpcSmTest, handle_connect_req_st_errors) {
   }
 
   while (true) {
-    auto msgbuf = rpc->alloc_msg_buffer(rpc->max_app_data_size_for_packets(1u));
+    auto msgbuf = rpc->alloc_msg_buffer(rpc->get_max_data_per_pkt());
     if (msgbuf.buf == nullptr) break;
   }
 
