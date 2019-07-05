@@ -119,13 +119,12 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     // will be needed (e.g., to determine the request type) if the continuation
     // runs in a background thread.
     memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
-           pkthdr->msg_size + sizeof(pkthdr_t) - kHeadroom);
+           sizeof(pkthdr_t) - kHeadroom);
 
     // XXX: Decrypt from resp_msgbuf->encrypted_buf into resp_msgbuf->buf, while
     // preserving the plaintext eRPC header.
     // But for now, just a memcpy
 
-    // This is not correct....
     memcpy(resp_msgbuf->buf, pkthdr + 1, pkthdr->msg_size);
 
     // Fall through to invoke continuation

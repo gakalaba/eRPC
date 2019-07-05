@@ -186,8 +186,8 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
     // the request. The allocated req_msgbuf is freed by the background thread.
     req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
     assert(req_msgbuf.buf != nullptr);
-    memcpy(req_msgbuf.get_pkthdr_0(), pkthdr,
-           pkthdr->msg_size + sizeof(pkthdr_t));
+    memcpy(req_msgbuf.get_pkthdr_0(), pkthdr, sizeof(pkthdr_t));
+    memcpy(req_msgbuf.buf, pkthdr + 1, pkthdr->msg_size);
     submit_bg_req_st(sslot);
     return;
   }
