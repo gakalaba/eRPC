@@ -489,9 +489,11 @@ class Rpc {
     if (unlikely(req_msgbuf.is_dynamic())) {
       free_msg_buffer(req_msgbuf);
       req_msgbuf.buffer.buf = nullptr;  // Mark invalid for future
+      req_msgbuf.encrypted_buffer.buf = nullptr;
     }
 
     req_msgbuf.buf = nullptr;
+    req_msgbuf.encrypted_buf = nullptr;
   }
 
   //
