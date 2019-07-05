@@ -259,8 +259,9 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
 
     req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
     assert(req_msgbuf.buf != nullptr);
-    // assert(req_msgbuf.encrypted_buf != nullptr) ???
+    assert(req_msgbuf.encrypted_buf != nullptr);
     *(req_msgbuf.get_pkthdr_0()) = *pkthdr;
+    ///memcpy(req_msgbuf.get_pkthdr_0(), pkthdr, sizeof(pkthdr_t));
 
     // Update sslot tracking
     sslot->cur_req_num = pkthdr->req_num;
@@ -274,7 +275,7 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   if (pkthdr->pkt_num != req_msgbuf.num_pkts - 1) enqueue_cr_st(sslot, pkthdr);
 
   // Header 0 was copied earlier. Request packet's index = packet number.
-  copy_data_to_encrypted_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);
+  copy_data_to_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);
 
   // Invoke the request handler iff we have all the request packets
   if (sslot->server_info.num_rx != req_msgbuf.num_pkts) return;

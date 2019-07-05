@@ -144,7 +144,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
 
     // Hdr 0 was copied earlier, other headers are unneeded, so copy just data.
     const size_t pkt_idx = resp_ntoi(pkthdr->pkt_num, req_msgbuf->num_pkts);
-    copy_data_to_encrypted_msgbuf(resp_msgbuf, pkt_idx, pkthdr);
+    copy_data_to_msgbuf(resp_msgbuf, pkt_idx, pkthdr);
 
     if (ci.num_rx != wire_pkts(req_msgbuf, resp_msgbuf)) return;
     // Else fall through to invoke continuation
