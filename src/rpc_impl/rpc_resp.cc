@@ -115,9 +115,16 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
   if (likely(pkthdr->msg_size <= TTr::kMaxDataPerPkt)) {
     resize_msg_buffer(resp_msgbuf, pkthdr->msg_size);
 
-    // Copy eRPC header and data, but not Transport headroom
+    // Copy eRPC header and data (but not Transport headroom). The eRPC header
+    // will be needed (e.g., to determine the request type) if the continuation
+    // runs in a background thread.
     memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
            pkthdr->msg_size + sizeof(pkthdr_t) - kHeadroom);
+
+    // XXX: Decrypt from resp_msgbuf->encrypted_buf into resp_msgbuf->buf, while
+    // preserving the plaintext eRPC header.
+    // But for now, just a memcpy
+
     // This is not correct....
     memcpy(resp_msgbuf->buf, pkthdr + 1, pkthdr->msg_size);
 
@@ -177,14 +184,10 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
 
   if (likely(_cont_etid == kInvalidBgETid)) {
 #ifdef SECURE
-
     int decrypt_res = aes_gcm_decrypt(
         resp_msgbuf->buf, resp_msgbuf->get_data_size(), session->secret);
-
     _unused(decrypt_res);
-
     assert(decrypt_res >= 0);
-
 #endif
 
     _cont_func(context, _tag);
