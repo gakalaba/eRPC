@@ -117,6 +117,8 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     // Copy eRPC header and data, but not Transport headroom
     memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
            pkthdr->msg_size + sizeof(pkthdr_t) - kHeadroom);
+    // This is not correct....
+    memcpy(resp_msgbuf->buf, pkthdr+1, pkthdr->msg_size);
 
     // Fall through to invoke continuation
   } else {
