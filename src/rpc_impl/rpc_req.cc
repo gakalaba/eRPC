@@ -11,7 +11,6 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
                                MsgBuffer *req_msgbuf, MsgBuffer *resp_msgbuf,
                                erpc_cont_func_t cont_func, void *tag,
                                size_t cont_etid) {
-  
   // Fill in encrypted application data
   memcpy(req_msgbuf->encrypted_buf, req_msgbuf->buf, req_msgbuf->max_data_size);
 
@@ -172,8 +171,8 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
     req_msgbuf = MsgBuffer(pkthdr, pkthdr->msg_size);
 
 #ifdef SECURE
-    int crypto_res = aes_gcm_decrypt(
-        req_msgbuf.buf, req_msgbuf.get_data_size(), sslot->session->secret);
+    int crypto_res = aes_gcm_decrypt(req_msgbuf.buf, req_msgbuf.get_data_size(),
+                                     sslot->session->secret);
 
     _unused(crypto_res);
 
@@ -183,13 +182,12 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
     req_func.req_func(static_cast<ReqHandle *>(sslot), context);
     return;
   } else {
-// For background request handlers, we need a RX ring--independent copy of
-// the request. The allocated req_msgbuf is freed by the background thread.
+    // For background request handlers, we need a RX ring--independent copy of
+    // the request. The allocated req_msgbuf is freed by the background thread.
     req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
     assert(req_msgbuf.buf != nullptr);
     memcpy(req_msgbuf.get_pkthdr_0(), pkthdr,
            pkthdr->msg_size + sizeof(pkthdr_t));
-
     submit_bg_req_st(sslot);
     return;
   }
@@ -258,7 +256,6 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
     bury_resp_msgbuf_server_st(sslot);
 
     req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
-
     assert(req_msgbuf.buf != nullptr);
     // assert(req_msgbuf.encrypted_buf != nullptr) ???
     *(req_msgbuf.get_pkthdr_0()) = *pkthdr;
@@ -289,8 +286,7 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   sslot->server_info.req_type = pkthdr->req_type;
   sslot->server_info.req_func_type = req_func.req_func_type;
 
-  // // req_msgbuf here is independent of the RX ring, so don't make another
-  // copy
+  // req_msgbuf here is independent of the RX ring, so don't make another copy
   if (likely(!req_func.is_background())) {
 #ifdef SECURE
 

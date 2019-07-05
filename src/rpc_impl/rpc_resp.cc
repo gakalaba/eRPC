@@ -10,7 +10,8 @@ namespace erpc {
 template <class TTr>
 void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
   // Fill in encrypted response data
-  memcpy(resp_msgbuf->encrypted_buf, resp_msgbuf->buf, resp_msgbuf->max_data_size);
+  memcpy(resp_msgbuf->encrypted_buf, resp_msgbuf->buf,
+         resp_msgbuf->max_data_size);
 
   SSlot *sslot = static_cast<SSlot *>(req_handle);
   Session *session = sslot->session;
@@ -118,7 +119,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
            pkthdr->msg_size + sizeof(pkthdr_t) - kHeadroom);
     // This is not correct....
-    memcpy(resp_msgbuf->buf, pkthdr+1, pkthdr->msg_size);
+    memcpy(resp_msgbuf->buf, pkthdr + 1, pkthdr->msg_size);
 
     // Fall through to invoke continuation
   } else {
@@ -126,9 +127,8 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     MsgBuffer *req_msgbuf = sslot->tx_msgbuf;
 
     if (pkthdr->pkt_num == req_msgbuf->num_pkts - 1) {
-// This is the first response packet. Size the response and copy header.
+      // This is the first response packet. Size the response and copy header.
       resize_msg_buffer(resp_msgbuf, pkthdr->msg_size);
-
       memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
              sizeof(pkthdr_t) - kHeadroom);
     }

@@ -79,14 +79,11 @@ class Rpc {
   /// Timeout for a session management request in milliseconds
   static constexpr size_t kSMTimeoutMs = kTesting ? 10 : 100;
 
+ public:
   /// Max request or response *data* size, i.e., excluding packet headers
-  // Any function that uses it needs to be SECURE-aware, or
-  // operate at transport layer
   static constexpr size_t kMaxMsgSize =
       HugeAlloc::kMaxClassSize -
       ((HugeAlloc::kMaxClassSize / TTr::kMaxDataPerPkt) * sizeof(pkthdr_t));
-
- public:
   static_assert((1 << kMsgSizeBits) >= kMaxMsgSize, "");
   static_assert((1 << kPktNumBits) * TTr::kMaxDataPerPkt > 2 * kMaxMsgSize, "");
 
@@ -168,7 +165,6 @@ class Rpc {
   static inline void resize_msg_buffer(MsgBuffer *msg_buffer,
                                        size_t new_data_size) {
     assert(msg_buffer->is_valid());  // Can be fake
-
     assert(new_data_size <= msg_buffer->max_data_size);
 
     // Avoid division for single-packet data sizes
@@ -548,18 +544,6 @@ class Rpc {
     return true;
   }
 
- public:
-  /**
-   * @brief
-   * @param n_packets The number of packets the client would like to send
-   *
-   * @return The maximum number of bytes which the client can use.
-   */
-  static inline size_t max_app_data_size_for_packets(size_t n_packets) {
-    return TTr::kMaxDataPerPkt * n_packets;
-  }
-
- private:
   /**
    * @brief Return the number of packets required for \p data_size data bytes.
    *
