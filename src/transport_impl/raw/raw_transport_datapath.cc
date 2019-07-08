@@ -30,8 +30,11 @@ void RawTransport::tx_burst(const tx_burst_item_t* tx_burst_arr,
       pkthdr = msg_buffer->get_pkthdr_0();
       sgl[0].addr = reinterpret_cast<uint64_t>(pkthdr);
       sgl[0].length = msg_buffer->get_pkt_size<kMaxDataPerPkt>(0);
+#ifdef SECURE
       sgl[0].lkey = msg_buffer->encrypted_buffer.lkey;
-
+#else
+      sgl[0].lkey = msg_buffer->buffer.lkey;
+#endif
       if (kMaxInline > 0 &&
           sgl[0].length <= kMaxInline + MLX5_ETH_INLINE_HEADER_SIZE) {
         wr.send_flags |= IBV_SEND_INLINE;
@@ -44,14 +47,23 @@ void RawTransport::tx_burst(const tx_burst_item_t* tx_burst_arr,
       pkthdr = msg_buffer->get_pkthdr_n(item.pkt_idx);
       sgl[0].addr = reinterpret_cast<uint64_t>(pkthdr);
       sgl[0].length = static_cast<uint32_t>(sizeof(pkthdr_t));
-      sgl[0].lkey = msg_buffer->encrypted_buffer.lkey;
+#ifdef SECURE
+      sgl[0].lkey = msg_buffer->encrypted_buffer.lkey
+#else
+      sgl[0].lkey = msg_buffer->buffer.lkey;
+#endif
 
       size_t offset = item.pkt_idx * kMaxDataPerPkt;
+      sgl[1].length = std::min(kMaxDataPerPkt, msg_buffer->data_size - offset);
+#ifdef SECURE
       sgl[1].addr =
           reinterpret_cast<uint64_t>(&msg_buffer->encrypted_buf[offset]);
-      sgl[1].length = std::min(kMaxDataPerPkt, msg_buffer->data_size - offset);
       sgl[1].lkey = msg_buffer->encrypted_buffer.lkey;
-
+#else
+      sgl[1].addr =
+          reinterpret_cast<uint64_t>(&msg_buffer->buf[offset]);
+      sgl[1].lkey = msg_buffer->buffer.lkey;
+#endif
       pkt_size = sgl[0].length + sgl[1].length;
       wr.num_sge = 2;
     }

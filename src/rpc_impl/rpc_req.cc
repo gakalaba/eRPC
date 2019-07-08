@@ -1,6 +1,7 @@
 #include <stdexcept>
 
 #include "rpc.h"
+#include <isa-l_crypto/aes_gcm.h>
 
 namespace erpc {
 
@@ -11,9 +12,6 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
                                MsgBuffer *req_msgbuf, MsgBuffer *resp_msgbuf,
                                erpc_cont_func_t cont_func, void *tag,
                                size_t cont_etid) {
-  // Fill in encrypted application data
-  memcpy(req_msgbuf->encrypted_buf, req_msgbuf->buf, req_msgbuf->max_data_size);
-
   // When called from a background thread, enqueue to the foreground thread
   if (unlikely(!in_dispatch())) {
     auto req_args = enq_req_args_t(session_num, req_type, req_msgbuf,
@@ -26,36 +24,17 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
   Session *session = session_vec[static_cast<size_t>(session_num)];
   assert(session->is_connected());  // User is notified before we disconnect
 #ifdef SECURE
-
-  // Encrypt the buffer
-  // Should probably not be done in the dispatch thread
-  // TODO: handshake, for now assume shared key is somehow available
-
-  fprintf(stderr, "------> Msg Byte: %d\n", req_msgbuf->buf[0]);
-  int x = 1;
-  x ^= x;
-  x /= x;
-  fprintf(
-      stderr,
-      "secret don't tell %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
-      session->secret[0], session->secret[1], session->secret[2],
-      session->secret[3], session->secret[4], session->secret[5],
-      session->secret[6], session->secret[7], session->secret[8],
-      session->secret[9], session->secret[10], session->secret[11],
-      session->secret[12], session->secret[13], session->secret[14],
-      session->secret[15], session->secret[16], session->secret[17],
-      session->secret[18], session->secret[19], session->secret[20],
-      session->secret[21], session->secret[22], session->secret[23],
-      session->secret[24]);
-  int encrypt_res = aes_gcm_encrypt(
-      req_msgbuf->buf, req_msgbuf->get_data_size(), session->secret);
-
-  // fprintf(stderr, "=====> Msg Byte encrypted: %d\n", req_msgbuf->buf[0]);
-
-  _unused(encrypt_res);
-
-  assert(encrypt_res >= 0);
-
+  uint8_t tag[MAX_TAG_LEN];
+  // Zero out the MAC/TAG field in the added pkthdr field
+  // TODO^^
+  uint8_t AAD = req_msgbuf->get_first_pkthdr();
+  // Encrypt the request msgbuffer application data
+  aesni_gcm128_enc(&gdata, req_msgbuf->encrypted_buf, req_msgbuf->buf, 
+      req_msgbuf->data_size, gcm_IV, AAD, req_msgbuf->num_pkts*sizeof(pkthdr_t),
+      tag, MAX_TAG_LEN);
+  // Copy over the computed MAC into the MAC/TAG field in pkthdr
+  // TODO^^
+  
 #endif /* SECURE */
 
   // If a free sslot is unavailable, save to session backlog
@@ -171,12 +150,15 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
     req_msgbuf = MsgBuffer(pkthdr, pkthdr->msg_size);
 
 #ifdef SECURE
-    int crypto_res = aes_gcm_decrypt(req_msgbuf.buf, req_msgbuf.get_data_size(),
-                                     sslot->session->secret);
-
-    _unused(crypto_res);
-
-    assert(crypto_res >= 0);
+    // Upon receiving, save the MAC/TAG field
+    // TODO^^
+    // Then Zero out the MAC/TAG field in the 0th pkthdr
+    // TODO^^
+    uint8_t tag[MAX_TAG_LEN];
+    uint8_t AAD = req_msgbuf.get_first_pkthdr();
+    aesni_gcm128_dec(&gdata, req_msgbuf.buf, pkthdr + 1, pkthdr->msg_size, 
+        gcm_IV, AAD, sizeof(pkthdr_t), tag, MAX_TAG_LEN);
+    // Compare the sent tag with the computed tag
 #endif
 
     req_func.req_func(static_cast<ReqHandle *>(sslot), context);
@@ -186,10 +168,22 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
     // the request. The allocated req_msgbuf is freed by the background thread.
     req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
     assert(req_msgbuf.buf != nullptr);
-    // Copy header to crypted MsgBuffer
+#ifdef SECURE
+    uint8_t tag[MAX_TAG_LEN];
+    uint8_t AAD = req_msbuf.get_first_pkthdr();
+    // Copy Header to encrypted MsgBuffer for transport into bg thread
     memcpy(req_msgbuf.get_pkthdr_0(), pkthdr, sizeof(pkthdr_t));
-    // Copy data to public buffer
-    memcpy(req_msgbuf.buf, pkthdr + 1, pkthdr->msg_size);
+    // Decrypt from encrypted MsgBuffer into public buf
+    // Save MAC/TAG field from pkthdr
+    // TODO^^
+    // Zero out field
+    // TODO^^
+    aesni_gcm128_dec(&gdata, req_msgbuf.buf, pkthdr + 1, pkthdr->msg_size,
+        gcm_IV, AAD, sizeof(pkthdr), tag, MAX_TAG_LEN);
+#else
+    memcpy(req_msgbuf.get_pkthdr_0(), pkthdr,
+           pkthdr->msg_size + sizeof(pkthdr_t));
+#endif
     submit_bg_req_st(sslot);
     return;
   }
@@ -276,11 +270,22 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
 
   // Header 0 was copied earlier. Request packet's index = packet number.
   copy_data_to_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);
-
+ 
   // Invoke the request handler iff we have all the request packets
   if (sslot->server_info.num_rx != req_msgbuf.num_pkts) return;
-
-  const ReqFunc &req_func = req_func_arr[pkthdr->req_type];
+#ifdef SECURE
+    // Upon receiving, save the MAC/TAG field
+    // TODO^^
+    // Then Zero out the MAC/TAG field in the 0th pkthdr
+    // TODO^^
+    uint8_t tag[MAX_TAG_LEN];
+    uint8_t AAD = req_msgbuf.get_first_pkthdr();
+    aesni_gcm128_dec(&gdata, req_msgbuf.buf, req_msgbuf.encrypted_buf,
+        pkthdr->msg_size, gcm_IV, AAD, req_msgbuf.num_pkts*sizeof(pkthdr_t), 
+        tag, MAX_TAG_LEN);
+    // Compare the computed tag to the sent tag
+#endif
+   const ReqFunc &req_func = req_func_arr[pkthdr->req_type];
 
   // Remember request metadata for enqueue_response(). req_type was invalidated
   // on previous enqueue_response(). Setting it implies that an enqueue_resp()
@@ -291,16 +296,6 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
 
   // req_msgbuf here is independent of the RX ring, so don't make another copy
   if (likely(!req_func.is_background())) {
-#ifdef SECURE
-
-    int decrypt_res = aes_gcm_decrypt(
-        req_msgbuf.buf, req_msgbuf.get_data_size(), sslot->session->secret);
-
-    _unused(decrypt_res);
-
-    assert(decrypt_res >= 0);
-
-#endif /* SECURE */
     req_func.req_func(static_cast<ReqHandle *>(sslot), context);
   } else {
     submit_bg_req_st(sslot);

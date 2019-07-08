@@ -1,5 +1,5 @@
 #include "rpc.h"
-
+#include <isa-l_crypto/aes_gcm.h>
 namespace erpc {
 
 // For both foreground and background request handlers, enqueue_response() may
@@ -9,19 +9,19 @@ namespace erpc {
 // So sslot->rx_msgbuf may or may not be valid at this point.
 template <class TTr>
 void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
-  // Fill in encrypted response data
-  memcpy(resp_msgbuf->encrypted_buf, resp_msgbuf->buf,
-         resp_msgbuf->max_data_size);
-
   SSlot *sslot = static_cast<SSlot *>(req_handle);
   Session *session = sslot->session;
 #ifdef SECURE
-  if (encrypt) {
-    int encrypt_res = aes_gcm_encrypt(
-        resp_msgbuf->buf, resp_msgbuf->get_data_size(), session->secret);
-    assert(encrypt_res >= 0);
-    _unused(encrypt_res);
-  }
+  uint8_t tag[MAX_TAG_LEN];
+  // Zero out the MAC/TAG field in the added pkthdr field
+  // TODO^^
+  uint8_t AAD = resp_msgbuf->get_first_pkthdr();
+  // Encrypt the response msgbuffer application data
+  aesni_gcm128_enc(&gdata, resp_msgbuf->encrypted_buf, resp_msgbuf->buf, 
+      resp_msgbuf->data_size, gcm_IV, AAD, 
+      resp_msgbuf->num_pkts*sizeof(pkthdr_t), tag, MAX_TAG_LEN);
+  // Copy over the computed MAC into the field 
+  // TODO^^
 #endif
 
   _unused(encrypt);
@@ -119,13 +119,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     // will be needed (e.g., to determine the request type) if the continuation
     // runs in a background thread.
     memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
-           sizeof(pkthdr_t) - kHeadroom);
-
-    // XXX: Decrypt from resp_msgbuf->encrypted_buf into resp_msgbuf->buf, while
-    // preserving the plaintext eRPC header.
-    // But for now, just a memcpy
-
-    memcpy(resp_msgbuf->buf, pkthdr + 1, pkthdr->msg_size);
+           pkthdr->msg_size + sizeof(pkthdr_t) - kHeadroom);
 
     // Fall through to invoke continuation
   } else {
@@ -180,16 +174,22 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
                     args.resp_msgbuf, args.cont_func, args.tag, args.cont_etid);
     session->client_info.enq_req_backlog.pop();
   }
-
-  if (likely(_cont_etid == kInvalidBgETid)) {
 #ifdef SECURE
-    int decrypt_res = aes_gcm_decrypt(
-        resp_msgbuf->buf, resp_msgbuf->get_data_size(), session->secret);
-    _unused(decrypt_res);
-    assert(decrypt_res >= 0);
+    // Upon receiving the entire message, first save the MAC/TAG
+    // TODO^^
+    // Then Zero out the MAC/TAG field in the 0th pkthdr
+    // TODO^^
+    // Then decrypt the encrypted msgbuf into the public buf
+    uin8_t tag[MAX_TAG_LEN];
+    uint8_t AAD = resp_msgbuf->get_first_pkthdr();
+    aesni_gcm128_dec(&gdata, resp_msgbuf->buf, resp_msgbuf->encrypted_buf,
+        resp_msgbuf->data_size, gcm_IV, AAD, 
+        resp_msgbuf->num_pkts*sizeof(pkthdr_t), tag, MAX_TAG_LEN);
+    // Compare the computed tag to the saved tag
+    // TODO^^
 #endif
-
-    _cont_func(context, _tag);
+   if (likely(_cont_etid == kInvalidBgETid)) {
+   _cont_func(context, _tag);
   } else {
     submit_bg_resp_st(_cont_func, _tag, _cont_etid);
   }

@@ -37,13 +37,30 @@ class MsgBuffer {
  private:
   /// Return a pointer to the pre-appended packet header of this MsgBuffer
   inline pkthdr_t *get_pkthdr_0() const {
+#ifdef SECURE 
     return reinterpret_cast<pkthdr_t *>(encrypted_buf - sizeof(pkthdr_t));
+#else
+    return reinterpret_cast<pkthdr_t *>(buf - sizeof(pkthdr_t));
+#endif  
   }
 
   /// Return a pointer to the nth packet header of this MsgBuffer.
   /// get_pkthdr_0() is more efficient for retrieving the zeroth header.
   inline pkthdr_t *get_pkthdr_n(size_t n) const {
+#ifdef SECURE
     return reinterpret_cast<pkthdr_t *>(encrypted_buf - (n + 1) * sizeof(pkthdr_t));
+#else
+    return reinterpret_cast<pkthdr_t *>(buf - (n + 1) * sizeof(pkthdr_t));
+#endif
+  }
+
+  /// Return a pointer to the first packet header of this MsgBuffer
+  inline pkthdr_t *get_first_pkthdr() const {
+#ifndef SECURE
+    return reinterpret_cast<pkthdr_t *>(encrypted_buffer.buf);
+#else
+    return reinterpret_cast<pkthdr_t *>(buffer.buf);
+#endif 
   }
 
   ///@{ Accessors for the packet header
@@ -133,6 +150,9 @@ class MsgBuffer {
         max_num_pkts(1),
         num_pkts(1),
         buf(reinterpret_cast<uint8_t *>(pkthdr) + sizeof(pkthdr_t)) {
+#ifdef SECURE
+    encrypted_buf = (reinterpret_cast<uint8_t *>(pkthdr) + sizeof(pkthdr_t));
+#endif
     assert(pkthdr->check_magic());  // pkthdr is the zeroth header
     // max_data_size can be zero for control packets, so can't assert
 

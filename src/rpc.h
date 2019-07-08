@@ -775,8 +775,13 @@ class Rpc {
                                             const pkthdr_t *pkthdr) {
     size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
     size_t to_copy = std::min(TTr::kMaxDataPerPkt, pkthdr->msg_size - offset);
+#ifdef SECURE
+    memcpy(&msgbuf->encrypted_buf[offset], pkthdr + 1,
+         to_copy);  // From end of pkthdr
+#else
     memcpy(&msgbuf->buf[offset], pkthdr + 1,
-           to_copy);  // From end of pkthdr
+         to_copy);  // From end of pkthdr
+#endif
   }
 
   /**
