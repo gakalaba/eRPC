@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "transport_impl/eth_common.h"
+#include <isa-l_crypto/aes_gcm.h>
 
 namespace erpc {
 
@@ -63,6 +64,8 @@ struct pkthdr_t {
   /// Request number, carried by all data and control packets for a request.
   uint64_t req_num : kReqNumBits;
   uint64_t magic : kPktHdrMagicBits;  ///< Magic from alloc_msg_buffer()
+
+  uint8_t authentication_tag[MAX_TAG_LEN]; ///< Tag used for GCM authentication
 
   /// Fill in packet header fields
   void format(uint64_t _req_type, uint64_t _msg_size,

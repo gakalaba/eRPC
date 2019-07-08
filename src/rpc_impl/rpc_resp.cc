@@ -14,14 +14,14 @@ void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
 #ifdef SECURE
   uint8_t tag[MAX_TAG_LEN];
   // Zero out the MAC/TAG field in the added pkthdr field
-  // TODO^^
+  memset(resp_msgbuf->get_pkthdr_0()->authenticated_tag, 0, MAX_TAG_LEN);
   uint8_t AAD = resp_msgbuf->get_first_pkthdr();
   // Encrypt the response msgbuffer application data
   aesni_gcm128_enc(&gdata, resp_msgbuf->encrypted_buf, resp_msgbuf->buf, 
       resp_msgbuf->data_size, gcm_IV, AAD, 
       resp_msgbuf->num_pkts*sizeof(pkthdr_t), tag, MAX_TAG_LEN);
   // Copy over the computed MAC into the field 
-  // TODO^^
+  memcpy(resp_msgbuf->get_pkthdr_0()->authenticated_tag, tag, MAX_TAG_LEN);
 #endif
 
   _unused(encrypt);
@@ -176,9 +176,11 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
   }
 #ifdef SECURE
     // Upon receiving the entire message, first save the MAC/TAG
-    // TODO^^
+    uint8_t authenticated_tag[MAX_TAG_LEN];
+    memcpy(authenticated_tag, resp_msgbuf->get_pkthdr_0()->authenticated_tag,
+        MAX_TAG_LEN);
     // Then Zero out the MAC/TAG field in the 0th pkthdr
-    // TODO^^
+    memset(resp_msgbuf->get_pkthdr_0()->authenticated_tag, 0, MAX_TAG_LEN);
     // Then decrypt the encrypted msgbuf into the public buf
     uin8_t tag[MAX_TAG_LEN];
     uint8_t AAD = resp_msgbuf->get_first_pkthdr();
