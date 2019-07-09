@@ -1,4 +1,7 @@
 #include "client_tests.h"
+#ifdef SECURE
+#include <crypto.h>
+#endif
 
 void req_handler(ReqHandle *, void *);  // Forward declaration
 

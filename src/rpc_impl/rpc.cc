@@ -51,7 +51,7 @@ Rpc<TTr>::Rpc(Nexus *nexus, void *context, uint8_t rpc_id,
   }
 
 #ifdef SECURE
-
+/*
   int codes, res;
   if (nullptr == (dh = DH_new())) {
     delete huge_alloc;
@@ -69,13 +69,13 @@ Rpc<TTr>::Rpc(Nexus *nexus, void *context, uint8_t rpc_id,
     DH_free(dh);
     throw std::runtime_error("DH_check Failed");
   }
-
+*/
   /* Generate the public and private key pair */
-  if (1 != DH_generate_key(dh)) {
-    delete huge_alloc;
-    DH_free(dh);
-    throw std::runtime_error("DH_generate_key Failed");
-  }
+  //if (1 != DH_generate_key(dh)) {
+  //  delete huge_alloc;
+  //  DH_free(dh);
+  //  throw std::runtime_error("DH_generate_key Failed");
+  //}
 // assert(DH_size(dh) == CRYPTO_GCM_HEX_KEY_LEN);
 #endif /* SECURE */
 
@@ -137,7 +137,7 @@ Rpc<TTr>::~Rpc() {
   }
 
 #ifdef SECURE
-  DH_free(dh);
+  //DH_free(dh);
 #endif /* SECURE */
 
   ERPC_INFO("Destroying Rpc %u.\n", rpc_id);

@@ -66,8 +66,8 @@ class Session {
 #ifdef SECURE
   // Ironic as it is this needs to be public for nexus to have direct access,
   // perhaps the design should change FIXME?
-  unsigned char secret[CRYPTO_GCM_KEY_LEN];
-  uint16_t secret_size;
+  //unsigned char secret[CRYPTO_GCM_KEY_LEN];
+  //uint16_t secret_size;
 // BIGNUM *secret
 #endif /* SECURE */
 

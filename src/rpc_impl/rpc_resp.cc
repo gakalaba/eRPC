@@ -1,5 +1,9 @@
 #include "rpc.h"
-#include <isa-l_crypto/aes_gcm.h>
+#ifdef SECURE
+#include <crypto.h>
+#endif
+
+
 namespace erpc {
 
 // For both foreground and background request handlers, enqueue_response() may
@@ -12,16 +16,16 @@ void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
   SSlot *sslot = static_cast<SSlot *>(req_handle);
   Session *session = sslot->session;
 #ifdef SECURE
-  uint8_t tag[MAX_TAG_LEN];
+  uint8_t tag_to_send[MAX_TAG_LEN];
   // Zero out the MAC/TAG field in the added pkthdr field
-  memset(resp_msgbuf->get_pkthdr_0()->authenticated_tag, 0, MAX_TAG_LEN);
-  uint8_t AAD = resp_msgbuf->get_first_pkthdr();
+  memset(resp_msgbuf->get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);
+  uint8_t *AAD = reinterpret_cast<uint8_t *>(resp_msgbuf->get_first_pkthdr());
   // Encrypt the response msgbuffer application data
   aesni_gcm128_enc(&gdata, resp_msgbuf->encrypted_buf, resp_msgbuf->buf, 
       resp_msgbuf->data_size, gcm_IV, AAD, 
-      resp_msgbuf->num_pkts*sizeof(pkthdr_t), tag, MAX_TAG_LEN);
+      resp_msgbuf->num_pkts*sizeof(pkthdr_t), tag_to_send, MAX_TAG_LEN);
   // Copy over the computed MAC into the field 
-  memcpy(resp_msgbuf->get_pkthdr_0()->authenticated_tag, tag, MAX_TAG_LEN);
+  memcpy(resp_msgbuf->get_pkthdr_0()->authentication_tag, tag_to_send, MAX_TAG_LEN);
 #endif
 
   _unused(encrypt);
@@ -176,18 +180,18 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
   }
 #ifdef SECURE
     // Upon receiving the entire message, first save the MAC/TAG
-    uint8_t authenticated_tag[MAX_TAG_LEN];
-    memcpy(authenticated_tag, resp_msgbuf->get_pkthdr_0()->authenticated_tag,
+    uint8_t received_tag[MAX_TAG_LEN];
+    memcpy(received_tag, resp_msgbuf->get_pkthdr_0()->authentication_tag,
         MAX_TAG_LEN);
     // Then Zero out the MAC/TAG field in the 0th pkthdr
-    memset(resp_msgbuf->get_pkthdr_0()->authenticated_tag, 0, MAX_TAG_LEN);
+    memset(resp_msgbuf->get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);
     // Then decrypt the encrypted msgbuf into the public buf
-    uin8_t tag[MAX_TAG_LEN];
-    uint8_t AAD = resp_msgbuf->get_first_pkthdr();
+    uint8_t current_tag[MAX_TAG_LEN];
+    uint8_t *AAD = reinterpret_cast<uint8_t *>(resp_msgbuf->get_first_pkthdr());
     aesni_gcm128_dec(&gdata, resp_msgbuf->buf, resp_msgbuf->encrypted_buf,
         resp_msgbuf->data_size, gcm_IV, AAD, 
-        resp_msgbuf->num_pkts*sizeof(pkthdr_t), tag, MAX_TAG_LEN);
-    // Compare the computed tag to the saved tag
+        resp_msgbuf->num_pkts*sizeof(pkthdr_t), current_tag, MAX_TAG_LEN);
+    // Compare the received tag to the current tag
     // TODO^^
 #endif
    if (likely(_cont_etid == kInvalidBgETid)) {

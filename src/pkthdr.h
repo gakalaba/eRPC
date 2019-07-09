@@ -2,7 +2,9 @@
 
 #include "common.h"
 #include "transport_impl/eth_common.h"
-#include <isa-l_crypto/aes_gcm.h>
+#ifdef SECURE
+#include <crypto.h>
+#endif
 
 namespace erpc {
 

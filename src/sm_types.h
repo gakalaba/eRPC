@@ -258,7 +258,7 @@ class SmPkt {
    * Additional CRYPTO_GCM_KEY_LEN (32) bytes per, could be optimized since it
    * is only used once per session.
    */
-  char pub_key[CRYPTO_GCM_HEX_KEY_LEN];
+  //char pub_key[CRYPTO_GCM_HEX_KEY_LEN];
 #endif /* SECURE */
 
   std::string to_string() const {

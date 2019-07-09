@@ -56,7 +56,7 @@ class MsgBuffer {
 
   /// Return a pointer to the first packet header of this MsgBuffer
   inline pkthdr_t *get_first_pkthdr() const {
-#ifndef SECURE
+#ifdef SECURE
     return reinterpret_cast<pkthdr_t *>(encrypted_buffer.buf);
 #else
     return reinterpret_cast<pkthdr_t *>(buffer.buf);
@@ -150,9 +150,6 @@ class MsgBuffer {
         max_num_pkts(1),
         num_pkts(1),
         buf(reinterpret_cast<uint8_t *>(pkthdr) + sizeof(pkthdr_t)) {
-#ifdef SECURE
-    encrypted_buf = (reinterpret_cast<uint8_t *>(pkthdr) + sizeof(pkthdr_t));
-#endif
     assert(pkthdr->check_magic());  // pkthdr is the zeroth header
     // max_data_size can be zero for control packets, so can't assert
 

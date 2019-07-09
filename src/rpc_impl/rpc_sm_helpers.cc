@@ -55,7 +55,7 @@ void Rpc<TTr>::bury_session_st(Session *session) {
     }
   }
 #ifdef SECURE
-  memset(&session->secret, 0, CRYPTO_GCM_KEY_LEN);
+  //memset(&session->secret, 0, CRYPTO_GCM_KEY_LEN);
 #endif /* SECURE */
 
   session_vec.at(session->local_session_num) = nullptr;
@@ -90,6 +90,7 @@ void Rpc<TTr>::send_sm_req_st(Session *session) {
   sm_pkt.client = session->client;
   sm_pkt.server = session->server;
 #ifdef SECURE
+  /*
   const BIGNUM *pub_key;
   DH_get0_key(dh, &pub_key, nullptr);
   char *key = BN_bn2hex(pub_key);
@@ -98,6 +99,7 @@ void Rpc<TTr>::send_sm_req_st(Session *session) {
     return;
   }
   memcpy(&sm_pkt.pub_key[0], key, CRYPTO_GCM_HEX_KEY_LEN);
+*/
 #endif /* SECURE */
 
   sm_pkt_udp_tx_st(sm_pkt);

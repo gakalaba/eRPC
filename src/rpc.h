@@ -192,6 +192,9 @@ class Rpc {
    * @param rem_rpc_id The ID of the remote Rpc object
    */
   int create_session(std::string remote_uri, uint8_t rem_rpc_id) {
+#ifdef SECURE
+    aesni_gcm128_pre(gcm_key, &gdata);
+#endif
     return create_session_st(remote_uri, rem_rpc_id);
   }
 
@@ -939,7 +942,7 @@ class Rpc {
   const size_t rpc_pkt_loss_scan_cycles;  ///< Packet loss scan frequency
 
 #ifdef SECURE
-  DH *dh;
+  //DH *dh;
 #endif /* SECURE */
   /// A copy of the request/response handlers from the Nexus. We could use
   /// a pointer instead, but an array is faster.

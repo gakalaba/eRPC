@@ -118,6 +118,7 @@ void Rpc<TTr>::handle_connect_req_st(const SmPkt &sm_pkt) {
   // Add server endpoint info created above to resp. No need to add client info.
   SmPkt resp_sm_pkt = sm_construct_resp(sm_pkt, SmErrType::kNoError);
 #ifdef SECURE
+  /*
   BIGNUM *peer_key;
   if (0 == (BN_hex2bn(&peer_key, &sm_pkt.pub_key[0]))) {
     sm_pkt_udp_tx_st(sm_construct_resp(sm_pkt, SmErrType::kCryptoError));
@@ -136,6 +137,7 @@ void Rpc<TTr>::handle_connect_req_st(const SmPkt &sm_pkt) {
     return;
   }
   memcpy(&resp_sm_pkt.pub_key[0], key, CRYPTO_GCM_HEX_KEY_LEN);
+*/
 #endif /* SECURE */
 
   alloc_ring_entries();
@@ -235,6 +237,7 @@ void Rpc<TTr>::handle_connect_resp_st(const SmPkt &sm_pkt) {
 
   session->client_info.cc.prev_desired_tx_tsc = rdtsc();
 #ifdef SECURE
+  /*
   if (sm_pkt.pkt_type == SmPktType::kConnectResp) {
     BIGNUM *peer_key;
     if (0 == (BN_hex2bn(&peer_key, &sm_pkt.pub_key[0]))) {
@@ -245,6 +248,7 @@ void Rpc<TTr>::handle_connect_resp_st(const SmPkt &sm_pkt) {
       assert(0);  // FIXME
     }
   }
+  */
 #endif /* SECURE */
 
   ERPC_INFO("%s: None. Session connected.\n", issue_msg);
