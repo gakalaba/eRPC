@@ -149,4 +149,52 @@ int aes_gcm_decrypt(unsigned char *data_buf, int data_len,
   return ret;
 }
 
+
+
+void encrypt_msgbuffer(MsgBuffer *msgbuf) {
+  uint8_t tag_to_send[MAX_TAG_LEN];
+  // Zero out the MAC/TAG field in the added pkthdr field
+  memset(msgbuf->get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);
+  uint8_t *AAD = reinterpret_cast<uint8_t *>(msgbuf->get_first_pkthdr());
+  // Encrypt the request msgbuffer application data
+  aesni_gcm128_enc(&gdata, msgbuf->encrypted_buf, msgbuf->buf,
+          msgbuf->data_size, gcm_IV, AAD, msgbuf->num_pkts*sizeof(pkthdr_t),
+          tag_to_send, MAX_TAG_LEN);
+  // Copy over the computed MAC into the MAC/TAG field in pkthdr
+  memcpy(msgbuf->get_pkthdr_0()->authentication_tag, tag_to_send, MAX_TAG_LEN);
+}
+
+void decrypt_msgbuffer(MsgBuffer *msgbuf) {
+  // Upon receiving the entire message, first save the MAC/TAG
+  uint8_t received_tag[MAX_TAG_LEN];
+  memcpy(received_tag, msgbuf->get_pkthdr_0()->authentication_tag,
+         MAX_TAG_LEN);
+  // Then Zero out the MAC/TAG field in the 0th pkthdr
+  memset(msgbuf->get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);
+  // Then decrypt the encrypted msgbuf into the public buf
+  uint8_t current_tag[MAX_TAG_LEN];
+  uint8_t *AAD = reinterpret_cast<uint8_t *>(msgbuf->get_first_pkthdr());
+  aesni_gcm128_dec(&gdata, msgbuf->buf, msgbuf->encrypted_buf,
+      msgbuf->data_size, gcm_IV, AAD,
+      msgbuf->num_pkts*sizeof(pkthdr_t), current_tag, MAX_TAG_LEN);
+  // Compare the received tag to the current tag
+  // TODO^^
+}
+
+void decrypt_recv_sm_msgbuffer(MsgBuffer *msgbuf, pkthdr_t *pkthdr) {
+  // Upon receiving, save the MAC/TAG field
+  uint8_t received_tag[MAX_TAG_LEN];
+  memcpy(received_tag, pkthdr->authentication_tag, MAX_TAG_LEN);
+  // Then Zero out the MAC/TAG field in the 0th pkthdr
+  memset(pkthdr->authentication_tag, 0, MAX_TAG_LEN);
+  uint8_t current_tag[MAX_TAG_LEN];
+  uint8_t *AAD = reinterpret_cast<uint8_t *>(msgbuf->get_first_pkthdr());
+  const uint8_t *cipher = reinterpret_cast<const uint8_t *>(pkthdr + 1);
+  // Decrypt from encrypted MsgBuffer into public buf
+  aesni_gcm128_dec(&gdata, msgbuf->buf, cipher, pkthdr->msg_size,
+      gcm_IV, AAD, sizeof(pkthdr_t), current_tag, MAX_TAG_LEN);
+  // Compare the received tag with the current tag 
+  // TODO^^
+}
+
 }  // namespace erpc

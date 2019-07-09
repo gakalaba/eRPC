@@ -26,17 +26,7 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
   Session *session = session_vec[static_cast<size_t>(session_num)];
   assert(session->is_connected());  // User is notified before we disconnect
 #ifdef SECURE
-  uint8_t tag_to_send[MAX_TAG_LEN];
-  // Zero out the MAC/TAG field in the added pkthdr field
-  memset(req_msgbuf->get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);
-  uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf->get_first_pkthdr());
-  // Encrypt the request msgbuffer application data
-  aesni_gcm128_enc(&gdata, req_msgbuf->encrypted_buf, req_msgbuf->buf, 
-      req_msgbuf->data_size, gcm_IV, AAD, req_msgbuf->num_pkts*sizeof(pkthdr_t),
-      tag_to_send, MAX_TAG_LEN);
-  // Copy over the computed MAC into the MAC/TAG field in pkthdr
-  memcpy(req_msgbuf->get_pkthdr_0()->authentication_tag, tag_to_send, MAX_TAG_LEN);
-  
+  encrypt_msgbuffer(req_msgbuf);
 #endif /* SECURE */
 
   // If a free sslot is unavailable, save to session backlog
@@ -152,18 +142,7 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
     req_msgbuf = MsgBuffer(pkthdr, pkthdr->msg_size);
 
 #ifdef SECURE
-    // Upon receiving, save the MAC/TAG field
-    uint8_t received_tag[MAX_TAG_LEN];
-    memcpy(received_tag, pkthdr->authentication_tag, MAX_TAG_LEN);
-    // Then Zero out the MAC/TAG field in the 0th pkthdr
-    memset(pkthdr->authentication_tag, 0, MAX_TAG_LEN);
-    uint8_t current_tag[MAX_TAG_LEN];
-    uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf.get_first_pkthdr());
-    const uint8_t *cipher = reinterpret_cast<const uint8_t *>(pkthdr + 1);
-    aesni_gcm128_dec(&gdata, req_msgbuf.buf, cipher, pkthdr->msg_size, 
-        gcm_IV, AAD, sizeof(pkthdr_t), current_tag, MAX_TAG_LEN);
-    // Compare the received tag with the current tag
-    // TODO^^
+    decrypt_recv_sm_msgbuffer(&req_msgbuf, pkthdr);
 #endif
 
     req_func.req_func(static_cast<ReqHandle *>(sslot), context);
@@ -174,21 +153,9 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
     req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
     assert(req_msgbuf.buf != nullptr);
 #ifdef SECURE
-    uint8_t current_tag[MAX_TAG_LEN];
-    uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf.get_first_pkthdr());
     // Copy Header to encrypted MsgBuffer for transport into bg thread
     memcpy(req_msgbuf.get_pkthdr_0(), pkthdr, sizeof(pkthdr_t));
-    // Decrypt from encrypted MsgBuffer into public buf
-    // Save MAC/TAG field from pkthdr
-    uint8_t received_tag[MAX_TAG_LEN];
-    memcpy(received_tag, pkthdr->authentication_tag, MAX_TAG_LEN);
-    // Zero out field
-    memset(pkthdr->authentication_tag, 0, MAX_TAG_LEN);
-    const uint8_t *cipher = reinterpret_cast<const uint8_t *>(pkthdr + 1);
-    aesni_gcm128_dec(&gdata, req_msgbuf.buf, cipher, pkthdr->msg_size,
-        gcm_IV, AAD, sizeof(pkthdr), current_tag, MAX_TAG_LEN);
-    // Compare the received tag with the current tag
-    // TODO^^
+    decrypt_recv_sm_msgbuffer(&req_msgbuf, pkthdr);
 #else
     memcpy(req_msgbuf.get_pkthdr_0(), pkthdr,
            pkthdr->msg_size + sizeof(pkthdr_t));
@@ -283,20 +250,7 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   // Invoke the request handler iff we have all the request packets
   if (sslot->server_info.num_rx != req_msgbuf.num_pkts) return;
 #ifdef SECURE
-    // Upon receiving, save the MAC/TAG field
-    uint8_t received_tag[MAX_TAG_LEN];
-    memcpy(received_tag, req_msgbuf.get_pkthdr_0()->authentication_tag, 
-        MAX_TAG_LEN);
-    // Then Zero out the MAC/TAG field in the 0th pkthdr
-    memset(req_msgbuf.get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);
-    uint8_t current_tag[MAX_TAG_LEN];
-    uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf.get_first_pkthdr());
-    // Decrypt the received request buffer
-    aesni_gcm128_dec(&gdata, req_msgbuf.buf, req_msgbuf.encrypted_buf,
-        pkthdr->msg_size, gcm_IV, AAD, req_msgbuf.num_pkts*sizeof(pkthdr_t), 
-        current_tag, MAX_TAG_LEN);
-    // Compare the received tag to the current tag
-    // TODO ^^
+  decrypt_msgbuffer(&req_msgbuf);
 #endif
    const ReqFunc &req_func = req_func_arr[pkthdr->req_type];
 
