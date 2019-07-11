@@ -1,10 +1,7 @@
 #include <stdexcept>
 
 #include "rpc.h"
-#ifdef SECURE
-#include <crypto.h>
-#endif
-
+#include <isa-l_crypto/aes_gcm.h>
 namespace erpc {
 
 // The cont_etid parameter is passed only when the event loop processes the
@@ -31,8 +28,8 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
   memset(req_msgbuf->get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);
   uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf->get_first_pkthdr());
   // Encrypt the request msgbuffer application data
-  aesni_gcm128_enc(&gdata, req_msgbuf->encrypted_buf, req_msgbuf->buf, 
-      req_msgbuf->data_size, gcm_IV, AAD, req_msgbuf->num_pkts*sizeof(pkthdr_t),
+  aesni_gcm128_enc(&(session->gdata), req_msgbuf->encrypted_buf, req_msgbuf->buf, 
+      req_msgbuf->data_size, session->gcm_IV, AAD, req_msgbuf->num_pkts*sizeof(pkthdr_t),
       tag_to_send, MAX_TAG_LEN);
   // Copy over the computed MAC into the MAC/TAG field in pkthdr
   memcpy(req_msgbuf->get_pkthdr_0()->authentication_tag, tag_to_send, MAX_TAG_LEN);
@@ -160,8 +157,8 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
     uint8_t current_tag[MAX_TAG_LEN];
     uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf.get_first_pkthdr());
     const uint8_t *cipher = reinterpret_cast<const uint8_t *>(pkthdr + 1);
-    aesni_gcm128_dec(&gdata, req_msgbuf.buf, cipher, pkthdr->msg_size, 
-        gcm_IV, AAD, sizeof(pkthdr_t), current_tag, MAX_TAG_LEN);
+    aesni_gcm128_dec(&(sslot->session->gdata), req_msgbuf.buf, cipher, pkthdr->msg_size, 
+        sslot->session->gcm_IV, AAD, sizeof(pkthdr_t), current_tag, MAX_TAG_LEN);
     // Compare the received tag with the current tag
     // TODO^^
 #endif
@@ -185,8 +182,8 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
     // Zero out field
     memset(pkthdr->authentication_tag, 0, MAX_TAG_LEN);
     const uint8_t *cipher = reinterpret_cast<const uint8_t *>(pkthdr + 1);
-    aesni_gcm128_dec(&gdata, req_msgbuf.buf, cipher, pkthdr->msg_size,
-        gcm_IV, AAD, sizeof(pkthdr), current_tag, MAX_TAG_LEN);
+    aesni_gcm128_dec(&(sslot->session->gdata), req_msgbuf.buf, cipher, pkthdr->msg_size,
+        sslot->session->gcm_IV, AAD, sizeof(pkthdr), current_tag, MAX_TAG_LEN);
     // Compare the received tag with the current tag
     // TODO^^
 #else
@@ -292,8 +289,8 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
     uint8_t current_tag[MAX_TAG_LEN];
     uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf.get_first_pkthdr());
     // Decrypt the received request buffer
-    aesni_gcm128_dec(&gdata, req_msgbuf.buf, req_msgbuf.encrypted_buf,
-        pkthdr->msg_size, gcm_IV, AAD, req_msgbuf.num_pkts*sizeof(pkthdr_t), 
+    aesni_gcm128_dec(&(sslot->session->gdata), req_msgbuf.buf, req_msgbuf.encrypted_buf,
+        pkthdr->msg_size, sslot->session->gcm_IV, AAD, req_msgbuf.num_pkts*sizeof(pkthdr_t), 
         current_tag, MAX_TAG_LEN);
     // Compare the received tag to the current tag
     // TODO ^^

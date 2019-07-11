@@ -3,9 +3,6 @@
  * @brief Handlers for session management connect requests and responses.
  */
 #include "rpc.h"
-#ifdef SECURE
-#include <crypto.h>
-#endif /* SECURE */
 
 namespace erpc {
 

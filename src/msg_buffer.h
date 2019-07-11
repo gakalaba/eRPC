@@ -5,10 +5,6 @@
 #include "util/buffer.h"
 #include "util/math_utils.h"
 
-#ifdef SECURE
-#include "crypto.h"
-#endif
-
 namespace erpc {
 
 // Forward declarations for friendship

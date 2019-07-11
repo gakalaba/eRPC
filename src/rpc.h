@@ -20,9 +20,7 @@
 #include "util/timer.h"
 #include "util/udp_client.h"
 
-#ifdef SECURE
-#include "crypto.h"
-#endif
+#include <isa-l_crypto/aes_gcm.h>
 
 namespace erpc {
 

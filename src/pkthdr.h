@@ -5,7 +5,6 @@
 #ifdef SECURE
 #include <crypto.h>
 #endif
-
 namespace erpc {
 
 // Explanation of the headroom hack:
