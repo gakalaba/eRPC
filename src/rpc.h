@@ -192,8 +192,11 @@ class Rpc {
   int create_session(std::string remote_uri, uint8_t rem_rpc_id) {
     int session_num = create_session_st(remote_uri, rem_rpc_id);
 #ifdef SECURE
-    Session *session = session_vec[static_cast<size_t>(session_num)];
-    aesni_gcm128_pre(session->gcm_key, &(session->gdata));
+    // Make sure the session creation didn't fail
+    if (session_num >= 0) {
+      Session *session = session_vec[static_cast<size_t>(session_num)];
+      aesni_gcm128_pre(session->gcm_key, &(session->gdata));
+    }
 #endif
     return session_num;
   }
