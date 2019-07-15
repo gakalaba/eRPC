@@ -135,7 +135,7 @@ TEST(OneSmallRpc, Foreground) {
   config_msg_size = Rpc<CTransport>::get_max_data_per_pkt();
   launch_helper();
 }
-/*
+
 TEST(OneSmallRpc, Background) {
   config_num_sessions = 1;
   config_num_bg_threads = 1;
@@ -175,7 +175,7 @@ TEST(MultiSmallRpcMultiSession, Background) {
   config_msg_size = Rpc<CTransport>::get_max_data_per_pkt();
   launch_helper();
 }
-*/
+
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

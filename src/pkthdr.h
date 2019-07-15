@@ -65,9 +65,9 @@ struct pkthdr_t {
   /// Request number, carried by all data and control packets for a request.
   uint64_t req_num : kReqNumBits;
   uint64_t magic : kPktHdrMagicBits;  ///< Magic from alloc_msg_buffer()
-
+#ifdef SECURE
   uint8_t authentication_tag[MAX_TAG_LEN]; ///< Tag used for GCM authentication
-
+#endif
   /// Fill in packet header fields
   void format(uint64_t _req_type, uint64_t _msg_size,
               uint64_t _dest_session_num, uint64_t _pkt_type, uint64_t _pkt_num,

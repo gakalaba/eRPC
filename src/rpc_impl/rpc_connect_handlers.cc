@@ -25,6 +25,11 @@ void Rpc<TTr>::handle_connect_req_st(const SmPkt &sm_pkt) {
     assert(session_vec.size() > srv_session_num);
 
     const Session *session = session_vec[srv_session_num];
+#ifdef SECURE
+    Session *non_const_session = session_vec[srv_session_num];
+    // Initialize the key used at this end
+    aesni_gcm128_pre(non_const_session->gcm_key, &(non_const_session->gdata));
+#endif
     if (session == nullptr || session->state != SessionState::kConnected) {
       ERPC_INFO("%s: Duplicate request, and response is unneeded.\n",
                 issue_msg);
