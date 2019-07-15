@@ -145,7 +145,12 @@ class MsgBuffer {
         data_size(max_data_size),
         max_num_pkts(1),
         num_pkts(1),
+#ifdef SECURE
+        encrypted_buf(reinterpret_cast<uint8_t *>(pkthdr) + sizeof(pkthdr_t)),
+        buf(buffer.buf + sizeof(pkthdr_t)) {
+#else
         buf(reinterpret_cast<uint8_t *>(pkthdr) + sizeof(pkthdr_t)) {
+#endif
     assert(pkthdr->check_magic());  // pkthdr is the zeroth header
     // max_data_size can be zero for control packets, so can't assert
 

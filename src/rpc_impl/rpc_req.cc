@@ -26,10 +26,9 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
   uint8_t tag_to_send[MAX_TAG_LEN];
   // Zero out the MAC/TAG field in the added pkthdr field
   memset(req_msgbuf->get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);
-  uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf->get_first_pkthdr());
   // Encrypt the request msgbuffer application data
   aesni_gcm128_enc(&(session->gdata), req_msgbuf->encrypted_buf, req_msgbuf->buf, 
-      req_msgbuf->data_size, session->gcm_IV, AAD, req_msgbuf->num_pkts*sizeof(pkthdr_t),
+      req_msgbuf->data_size, session->gcm_IV, NULL, 0, //AAD, req_msgbuf->num_pkts*sizeof(pkthdr_t),
       tag_to_send, MAX_TAG_LEN);
   // Copy over the computed MAC into the MAC/TAG field in pkthdr
   memcpy(req_msgbuf->get_pkthdr_0()->authentication_tag, tag_to_send, MAX_TAG_LEN);
@@ -146,19 +145,22 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
   if (likely(!req_func.is_background())) {
     // For foreground request handlers, a "fake" static request MsgBuffer
     // suffices -- it's valid for the duration of req_func().
-    req_msgbuf = MsgBuffer(pkthdr, pkthdr->msg_size);
+    //req_msgbuf = MsgBuffer(pkthdr, pkthdr->msg_size);
 
 #ifdef SECURE
+    req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
+    memcpy(req_msgbuf.get_pkthdr_0(), pkthdr, sizeof(pkthdr_t) + pkthdr->msg_size);
     // Upon receiving, save the MAC/TAG field
     uint8_t received_tag[MAX_TAG_LEN];
     memcpy(received_tag, pkthdr->authentication_tag, MAX_TAG_LEN);
     // Then Zero out the MAC/TAG field in the 0th pkthdr
     memset(pkthdr->authentication_tag, 0, MAX_TAG_LEN);
     uint8_t current_tag[MAX_TAG_LEN];
-    uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf.get_first_pkthdr());
-    const uint8_t *cipher = reinterpret_cast<const uint8_t *>(pkthdr + 1);
-    aesni_gcm128_dec(&(sslot->session->gdata), req_msgbuf.buf, cipher, pkthdr->msg_size, 
-        sslot->session->gcm_IV, AAD, sizeof(pkthdr_t), current_tag, MAX_TAG_LEN);
+    
+    aesni_gcm128_dec(&(sslot->session->gdata), req_msgbuf.buf, req_msgbuf.encrypted_buf, 
+        pkthdr->msg_size, 
+        sslot->session->gcm_IV, NULL, 0, //sizeof(pkthdr_t), 
+        current_tag, MAX_TAG_LEN);
     // Compare the received tag with the current tag
     // TODO^^
 #endif
