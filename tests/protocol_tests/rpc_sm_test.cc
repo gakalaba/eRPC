@@ -27,6 +27,7 @@ class RpcSmTest : public RpcTest {
 //
 // handle_connect_req_st()
 //
+
 TEST_F(RpcSmTest, handle_connect_req_st_reordering) {
   const auto client = get_remote_endpoint();
   const auto server = set_invalid_session_num(get_local_endpoint());

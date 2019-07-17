@@ -274,7 +274,7 @@ TEST(Base, BothInForeground) {
   launch_server_client_threads(2, 0, client_thread, reg_info_vec,
                                ConnectServers::kTrue, 0.0);
 }
-
+/*
 /// 1 primary, 1 backup, primary in background
 TEST(Base, PrimaryInBackground) {
   primary_bg = true;
@@ -302,7 +302,7 @@ TEST(Base, BothInBackground) {
   launch_server_client_threads(2, 3, client_thread, reg_info_vec,
                                ConnectServers::kTrue, 0.0);
 }
-
+*/
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

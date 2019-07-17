@@ -180,7 +180,7 @@ TEST(OneLargeRpc, Foreground) {
   config_num_bg_threads = 0;
   launch_helper();
 }
-
+/*
 TEST(OneLargeRpc, Background) {
   config_num_iters = 1;
   config_num_sessions = 1;
@@ -240,7 +240,7 @@ TEST(DISABLED_MemoryLeak, Background) {
   config_num_bg_threads = 1;
   launch_helper();
 }
-
+*/
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
