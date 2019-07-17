@@ -77,6 +77,8 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
       memcpy(pkthdr_i, pkthdr_0, sizeof(pkthdr_t));
       pkthdr_i->pkt_num = i;
     }
+    ERPC_INFO("CLIENT SIDE ENQ REQ:\nreq_msgbuf->num_pkts=%zu\nbuf[0]=%u\nencrypted_buf[0]=%u\n",
+        req_msgbuf->num_pkts,req_msgbuf->buf[0], req_msgbuf->encrypted_buf[0]);
   }
 
   if (likely(session->client_info.credits > 0)) {
@@ -274,6 +276,10 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
 
   // Header 0 was copied earlier. Request packet's index = packet number.
   copy_data_to_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);
+
+  ERPC_INFO("SERVER SIDE RESP PROCESS: BEFORE DECRYPT:\nreq_msgbuf->num_pkts=%zu\nbuf[0]=%u\nencrypted_buf[0]=%u\n",
+        req_msgbuf.num_pkts,req_msgbuf.buf[0], req_msgbuf.encrypted_buf[0]);
+  
  
   // Invoke the request handler iff we have all the request packets
   if (sslot->server_info.num_rx != req_msgbuf.num_pkts) return;
@@ -293,7 +299,10 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
     // Compare the received tag to the current tag
     // TODO ^^
 #endif
-   const ReqFunc &req_func = req_func_arr[pkthdr->req_type];
+
+  ERPC_INFO("SERVER SIDE RESP PROCESS: AFTER DECRYPT:\nreq_msgbuf->num_pkts=%zu\nbuf[0]=%u\nencrypted_buf[0]=%u\n",
+        req_msgbuf.num_pkts,req_msgbuf.buf[0], req_msgbuf.encrypted_buf[0]);
+    const ReqFunc &req_func = req_func_arr[pkthdr->req_type];
 
   // Remember request metadata for enqueue_response(). req_type was invalidated
   // on previous enqueue_response(). Setting it implies that an enqueue_resp()

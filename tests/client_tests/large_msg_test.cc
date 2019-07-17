@@ -48,6 +48,7 @@ void req_handler(ReqHandle *req_handle, void *_c) {
   const auto *app_hdr = reinterpret_cast<app_hdr_t *>(req_msgbuf->buf);
 
   auto &resp = req_handle->dyn_resp_msgbuf;
+  test_printf("%zu\n%zu\n%zu\n",app_hdr->id,app_hdr->req_size,app_hdr->resp_size);
   resp = c->rpc->alloc_msg_buffer_or_die(app_hdr->resp_size);
 
   *reinterpret_cast<app_hdr_t *>(resp.buf) = *app_hdr;  // Copy app req header
