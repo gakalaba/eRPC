@@ -25,9 +25,6 @@ void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
   memcpy(resp_msgbuf->get_pkthdr_0()->authentication_tag, tag_to_send, MAX_TAG_LEN);
 #endif
   
-//  ERPC_INFO("SERVER SIDE ENQ RESP: AFTER DECRYPT: resp_msgbuf->num_pkts=%zu buf[0]=%u encrypted_buf[0]=%u\n",
-//    resp_msgbuf->num_pkts,resp_msgbuf->buf[0], resp_msgbuf->encrypted_buf[0]);
-
   _unused(encrypt);
 
   // When called from a background thread, enqueue to the foreground thread
@@ -179,10 +176,6 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     session->client_info.enq_req_backlog.pop();
   }
  
- // ERPC_INFO("CLIENT SIDE PROCESS REQ: BEFORE DECRYPT: resp_msgbuf->num_pkts=%zu buf[0]=%u encrypted_buf[0]=%u\n",
- //   resp_msgbuf->num_pkts,resp_msgbuf->buf[0], resp_msgbuf->encrypted_buf[0]);
-
-
 #ifdef SECURE
     // Upon receiving the entire message, first save the MAC/TAG
     uint8_t received_tag[MAX_TAG_LEN];
@@ -199,11 +192,6 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     // Compare the received tag to the current tag
     // TODO^^
 #endif
- 
-  //ERPC_INFO("CLIENT SIDE PROCESS REQ: AFTER DECRYPT: resp_msgbuf->num_pkts=%zu buf[0]=%u encrypted_buf[0]=%u\n",
-  //  resp_msgbuf->num_pkts,resp_msgbuf->buf[0], resp_msgbuf->encrypted_buf[0]);
-
-
    if (likely(_cont_etid == kInvalidBgETid)) {
    _cont_func(context, _tag);
   } else {

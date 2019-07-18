@@ -127,7 +127,7 @@ void generic_test_func(Nexus *nexus, size_t) {
 
         // Generate request metadata
         size_t min_msg_size = sizeof(app_hdr_t) + sizeof(size_t);
-        size_t req_size = 8332;//get_rand_msg_size(&c.fastrand, rpc, min_msg_size);
+        size_t req_size = get_rand_msg_size(&c.fastrand, rpc, min_msg_size);
         size_t resp_size = get_rand_msg_size(&c.fastrand, rpc, min_msg_size);
         uint8_t byte_contents = c.fastrand.next_u32() % UINT8_MAX;
 
@@ -135,7 +135,7 @@ void generic_test_func(Nexus *nexus, size_t) {
         auto *app_hdr = reinterpret_cast<app_hdr_t *>(cur_req_msgbuf.buf);
         *app_hdr = app_hdr_t(req_size, resp_size, byte_contents);
 
-        memset(cur_req_msgbuf.buf + sizeof(app_hdr_t), 69,//byte_contents,
+        memset(cur_req_msgbuf.buf + sizeof(app_hdr_t), byte_contents,
                req_size - sizeof(app_hdr_t));
 
         rpc->enqueue_request(session_num_arr[sess_i], kTestReqType,
@@ -207,7 +207,7 @@ TEST(MultiLargeRpcOneSession, Background) {
 }
 
 TEST(MultiLargeRpcMultiSession, Foreground) {
-  //assert(erpc::is_log_level_reasonable());
+  assert(erpc::is_log_level_reasonable());
   config_num_iters = 2;
   config_num_sessions = 4;
   config_rpcs_per_session = kSessionReqWindow;
@@ -216,7 +216,7 @@ TEST(MultiLargeRpcMultiSession, Foreground) {
 }
 
 TEST(MultiLargeRpcMultiSession, Background) {
-  //assert(erpc::is_log_level_reasonable());
+  assert(erpc::is_log_level_reasonable());
   config_num_iters = 2;
   config_num_sessions = 4;
   config_rpcs_per_session = kSessionReqWindow;
@@ -225,7 +225,7 @@ TEST(MultiLargeRpcMultiSession, Background) {
 }
 
 TEST(DISABLED_MemoryLeak, Foreground) {
-  //assert(erpc::is_log_level_reasonable());
+  assert(erpc::is_log_level_reasonable());
   config_num_iters = 50;
   config_num_sessions = 4;
   config_rpcs_per_session = kSessionReqWindow;

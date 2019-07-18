@@ -72,23 +72,6 @@ class MsgBuffer {
     return get_pkthdr_n(pkt_idx)->to_string();
   }
 
-  std::string get_data_str(size_t n) const {
-    std::ostringstream ret;
-    ret << "[  ";
-    for (size_t i=0; i<data_size; i++) {
-      if (n==2) {
-        ret << std::to_string(buf[i]) << "  ";
-      }
-      else {
-        ret << std::to_string(encrypted_buf[i]) << "  ";
-      }
-    }
-    ret << "]";
-    return ret.str();
-  }
-
-
-
   /// Basic validity check that every MsgBuffer must satisfy
   inline bool is_valid() const {
     return buf != nullptr && get_pkthdr_0()->magic == kPktHdrMagic;

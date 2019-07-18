@@ -120,16 +120,6 @@ class Session {
   inline bool is_server() const { return role == Role::kServer; }
   inline bool is_connected() const { return state == SessionState::kConnected; }
 
-  std::string get_gdata_str(struct gcm_data *g) const {
-    std::ostringstream ret;
-    uint8_t *y = reinterpret_cast<uint8_t *>(g);
-    ret << "{";
-    for (size_t i=0; i < sizeof(struct gcm_data); i++) {
-      ret << std::to_string(y[i]);
-    }
-    ret << "}";
-    return ret.str();
-  }
   /**
    * @brief Get the desired TX timestamp, and update TX timestamp tracking
    *
