@@ -22,6 +22,10 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
   // If we're here, we're in the dispatch thread
   Session *session = session_vec[static_cast<size_t>(session_num)];
   assert(session->is_connected());  // User is notified before we disconnect
+//ERPC_INFO("CLIENT SIDE ENQ REQ BEFORE ENCRYPT: req_msgbuf->num_pkts=%zu buf=%s encrypted_buf=%s\n",
+//        req_msgbuf->num_pkts,req_msgbuf->get_data_str(0).c_str(), req_msgbuf->get_data_str(1).c_str());
+//ERPC_INFO("gdata before encrypt=%s\n\n",session->get_gdata_str(&(session->gdata)).c_str());
+  
 #ifdef SECURE
   uint8_t tag_to_send[MAX_TAG_LEN];
   // Zero out the MAC/TAG field in the added pkthdr field
@@ -77,8 +81,10 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
       memcpy(pkthdr_i, pkthdr_0, sizeof(pkthdr_t));
       pkthdr_i->pkt_num = i;
     }
-    ERPC_INFO("CLIENT SIDE ENQ REQ:\nreq_msgbuf->num_pkts=%zu\nbuf[0]=%u\nencrypted_buf[0]=%u\n",
-        req_msgbuf->num_pkts,req_msgbuf->buf[0], req_msgbuf->encrypted_buf[0]);
+    //ERPC_INFO("CLIENT SIDE ENQ REQ AFTER ENCRYPT: req_msgbuf->num_pkts=%zu buf=%s encrypted_buf=%s\n",
+    //    req_msgbuf->num_pkts,req_msgbuf->get_data_str(0).c_str(), req_msgbuf->get_data_str(1).c_str());
+
+    //ERPC_INFO("gdata after encrypt=%s\n\n",session->get_gdata_str(&(session->gdata)).c_str());
   }
 
   if (likely(session->client_info.credits > 0)) {
@@ -277,10 +283,11 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   // Header 0 was copied earlier. Request packet's index = packet number.
   copy_data_to_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);
 
-  ERPC_INFO("SERVER SIDE RESP PROCESS: BEFORE DECRYPT:\nreq_msgbuf->num_pkts=%zu\nbuf[0]=%u\nencrypted_buf[0]=%u\n",
-        req_msgbuf.num_pkts,req_msgbuf.buf[0], req_msgbuf.encrypted_buf[0]);
+  //ERPC_INFO("SERVER SIDE RESP PROCESS: BEFORE DECRYPT: req_msgbuf->num_pkts=%zu buf=%s encrypted_buf=%s\n",
+  //      req_msgbuf.num_pkts,req_msgbuf.get_data_str(0).c_str(), req_msgbuf.get_data_str(1).c_str());
   
  
+  //ERPC_INFO("gdata before decrypt=%s\n\n",sslot->session->get_gdata_str(&(sslot->session->gdata)).c_str());
   // Invoke the request handler iff we have all the request packets
   if (sslot->server_info.num_rx != req_msgbuf.num_pkts) return;
 #ifdef SECURE
@@ -300,8 +307,9 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
     // TODO ^^
 #endif
 
-  ERPC_INFO("SERVER SIDE RESP PROCESS: AFTER DECRYPT:\nreq_msgbuf->num_pkts=%zu\nbuf[0]=%u\nencrypted_buf[0]=%u\n",
-        req_msgbuf.num_pkts,req_msgbuf.buf[0], req_msgbuf.encrypted_buf[0]);
+  //ERPC_INFO("gdata after decrypt=%s\n\n",sslot->session->get_gdata_str(&(sslot->session->gdata)).c_str());
+  //ERPC_INFO("SERVER SIDE RESP PROCESS: AFTER DECRYPT: req_msgbuf->num_pkts=%zu buf=%s encrypted_buf=%s\n",
+  //      req_msgbuf.num_pkts,req_msgbuf.get_data_str(0).c_str(), req_msgbuf.get_data_str(1).c_str());
     const ReqFunc &req_func = req_func_arr[pkthdr->req_type];
 
   // Remember request metadata for enqueue_response(). req_type was invalidated
