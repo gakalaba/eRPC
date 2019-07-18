@@ -24,7 +24,7 @@ void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
   // Copy over the computed MAC into the field 
   memcpy(resp_msgbuf->get_pkthdr_0()->authentication_tag, tag_to_send, MAX_TAG_LEN);
 #endif
-  
+
   _unused(encrypt);
 
   // When called from a background thread, enqueue to the foreground thread
@@ -175,7 +175,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
                     args.resp_msgbuf, args.cont_func, args.tag, args.cont_etid);
     session->client_info.enq_req_backlog.pop();
   }
- 
+
 #ifdef SECURE
     // Upon receiving the entire message, first save the MAC/TAG
     uint8_t received_tag[MAX_TAG_LEN];
