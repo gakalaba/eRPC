@@ -117,7 +117,7 @@ if(SECURE)
     message(FATAL_ERROR "openssl not found")
   endif()
 
-  set(LIBRARIES ${LIBRARIES} ssl crypto)
+  set(LIBRARIES ${LIBRARIES} isal_crypto crypto)
 else(SECURE)
   message(STATUS "Encryption is disabled. Compiling without AES/OpenSSL support")
 endif(SECURE)

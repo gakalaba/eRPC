@@ -1,9 +1,6 @@
 #pragma once
 
 #include <mutex>
-#ifdef SECURE
-#include <crypto.h>
-#endif /* SECURE */
 
 #include "common.h"
 #include "transport.h"

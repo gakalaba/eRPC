@@ -4,10 +4,6 @@
  */
 #include "rpc.h"
 
-#ifdef SECURE
-#include <crypto.h>
-#endif /* SECURE */
-
 namespace erpc {
 
 template <class TTr>

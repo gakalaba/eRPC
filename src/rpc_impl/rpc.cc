@@ -6,10 +6,6 @@
 #include <iostream>
 #include <stdexcept>
 
-#ifdef SECURE
-#include <crypto.h>
-#endif
-
 #include "rpc.h"
 
 namespace erpc {

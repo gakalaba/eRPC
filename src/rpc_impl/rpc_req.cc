@@ -1,10 +1,7 @@
 #include <stdexcept>
 
+#include <isa-l_crypto/aes_gcm.h>
 #include "rpc.h"
-#ifdef SECURE
-#include <crypto.h>
-#endif
-
 namespace erpc {
 
 // The cont_etid parameter is passed only when the event loop processes the
@@ -26,7 +23,17 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
   Session *session = session_vec[static_cast<size_t>(session_num)];
   assert(session->is_connected());  // User is notified before we disconnect
 #ifdef SECURE
-  encrypt_msgbuffer(req_msgbuf);
+  uint8_t tag_to_send[MAX_TAG_LEN];
+  // Zero out the MAC/TAG field in the added pkthdr field
+  memset(req_msgbuf->get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);
+  // Encrypt the request msgbuffer application data
+  aesni_gcm128_enc(&(session->gdata), req_msgbuf->encrypted_buf,
+                   req_msgbuf->buf, req_msgbuf->data_size, session->gcm_IV,
+                   NULL, 0,  // AAD, req_msgbuf->num_pkts*sizeof(pkthdr_t),
+                   tag_to_send, MAX_TAG_LEN);
+  // Copy over the computed MAC into the MAC/TAG field in pkthdr
+  memcpy(req_msgbuf->get_pkthdr_0()->authentication_tag, tag_to_send,
+         MAX_TAG_LEN);
 #endif /* SECURE */
 
   // If a free sslot is unavailable, save to session backlog
@@ -136,32 +143,55 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
   sslot->server_info.req_type = pkthdr->req_type;
   sslot->server_info.req_func_type = req_func.req_func_type;
 
-  if (likely(!req_func.is_background())) {
-    // For foreground request handlers, a "fake" static request MsgBuffer
-    // suffices -- it's valid for the duration of req_func().
-    req_msgbuf = MsgBuffer(pkthdr, pkthdr->msg_size);
-
 #ifdef SECURE
-    decrypt_recv_sm_msgbuffer(&req_msgbuf, pkthdr);
+  // We need an RX ring--independent copy of
+  // the request. The allocated req_msgbuf is freed by the background thread.
+  req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
+  assert(req_msgbuf.buf != nullptr);
+  // Copy Header to encrypted MsgBuffer for transport as well as encrypted data
+  memcpy(req_msgbuf.get_pkthdr_0(), pkthdr,
+         sizeof(pkthdr_t) + pkthdr->msg_size);
+
+  // Upon receiving, save the MAC/TAG field
+  uint8_t received_tag[MAX_TAG_LEN];
+  memcpy(received_tag, pkthdr->authentication_tag, MAX_TAG_LEN);
+  // Then Zero out the MAC/TAG field in the 0th pkthdr
+  memset(pkthdr->authentication_tag, 0, MAX_TAG_LEN);
+  uint8_t current_tag[MAX_TAG_LEN];
+
+  // The additional data is the pkthdr, this is authenticated
+  // uint8_t *AAD = reinterpret_cast<uint8_t *>(pkthdr);
+  aesni_gcm128_dec(&(sslot->session->gdata), req_msgbuf.buf,
+                   req_msgbuf.encrypted_buf, pkthdr->msg_size,
+                   sslot->session->gcm_IV, NULL, 0,  // AAD, sizeof(pkthdr_t),
+                   current_tag, MAX_TAG_LEN);
+// Compare the received tag with the current tag
+// TODO^^
 #endif
 
+  if (likely(!req_func.is_background())) {
+#ifdef SECURE
     req_func.req_func(static_cast<ReqHandle *>(sslot), context);
     return;
+#else
+    req_msgbuf = MsgBuffer(pkthdr, pkthdr->msg_size);
+    req_func.req_func(static_cast<ReqHandle *>(sslot), context);
+    return;
+#endif
   } else {
-    // For background request handlers, we need a RX ring--independent copy of
+#ifdef SECURE
+    submit_bg_req_st(sslot);
+    return;
+#else
+    // We need an RX ring--independent copy of
     // the request. The allocated req_msgbuf is freed by the background thread.
     req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
     assert(req_msgbuf.buf != nullptr);
-#ifdef SECURE
-    // Copy Header to encrypted MsgBuffer for transport into bg thread
-    memcpy(req_msgbuf.get_pkthdr_0(), pkthdr, sizeof(pkthdr_t));
-    decrypt_recv_sm_msgbuffer(&req_msgbuf, pkthdr);
-#else
     memcpy(req_msgbuf.get_pkthdr_0(), pkthdr,
            pkthdr->msg_size + sizeof(pkthdr_t));
-#endif
     submit_bg_req_st(sslot);
     return;
+#endif
   }
 }
 
@@ -231,7 +261,7 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
     assert(req_msgbuf.buf != nullptr);
     assert(req_msgbuf.encrypted_buf != nullptr);
     *(req_msgbuf.get_pkthdr_0()) = *pkthdr;
-    ///memcpy(req_msgbuf.get_pkthdr_0(), pkthdr, sizeof(pkthdr_t));
+    /// memcpy(req_msgbuf.get_pkthdr_0(), pkthdr, sizeof(pkthdr_t));
 
     // Update sslot tracking
     sslot->cur_req_num = pkthdr->req_num;
@@ -246,13 +276,27 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
 
   // Header 0 was copied earlier. Request packet's index = packet number.
   copy_data_to_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);
- 
-  // Invoke the request handler iff we have all the request packets
+
   if (sslot->server_info.num_rx != req_msgbuf.num_pkts) return;
 #ifdef SECURE
-  decrypt_msgbuffer(&req_msgbuf);
+  // Upon receiving, save the MAC/TAG field
+  uint8_t received_tag[MAX_TAG_LEN];
+  memcpy(received_tag, req_msgbuf.get_pkthdr_0()->authentication_tag,
+         MAX_TAG_LEN);
+  // Then Zero out the MAC/TAG field in the 0th pkthdr
+  memset(req_msgbuf.get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);
+  uint8_t current_tag[MAX_TAG_LEN];
+  // uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf.get_first_pkthdr());
+  // Decrypt the received request buffer
+  aesni_gcm128_dec(&(sslot->session->gdata), req_msgbuf.buf,
+                   req_msgbuf.encrypted_buf, pkthdr->msg_size,
+                   sslot->session->gcm_IV, NULL,
+                   0,  // AAD, req_msgbuf.num_pkts*sizeof(pkthdr_t),
+                   current_tag, MAX_TAG_LEN);
+// Compare the received tag to the current tag
+// TODO ^^
 #endif
-   const ReqFunc &req_func = req_func_arr[pkthdr->req_type];
+  const ReqFunc &req_func = req_func_arr[pkthdr->req_type];
 
   // Remember request metadata for enqueue_response(). req_type was invalidated
   // on previous enqueue_response(). Setting it implies that an enqueue_resp()

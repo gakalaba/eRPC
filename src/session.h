@@ -4,10 +4,6 @@
 #include <mutex>
 #include <queue>
 
-#ifdef SECURE
-#include <crypto.h>
-#endif /* SECURE */
-
 #include "cc/timely.h"
 #include "cc/timing_wheel.h"
 #include "common.h"
@@ -18,8 +14,9 @@
 #include "util/buffer.h"
 #include "util/fixed_vector.h"
 
-namespace erpc {
+#include <isa-l_crypto/aes_gcm.h>
 
+namespace erpc {
 /// The arguments to enqueue_request()
 struct enq_req_args_t {
   int session_num;
@@ -64,10 +61,19 @@ class Session {
  public:
   enum class Role : int { kServer, kClient };
 #ifdef SECURE
-  // Ironic as it is this needs to be public for nexus to have direct access,
-  // perhaps the design should change FIXME?
-  //unsigned char secret[CRYPTO_GCM_KEY_LEN];
-  //uint16_t secret_size;
+  uint8_t gcm_key[GCM_128_KEY_LEN] = {0xc9, 0x39, 0xcc, 0x13, 0x39, 0x7c,
+                                      0x1d, 0x37, 0xde, 0x6a, 0xe0, 0xe1,
+                                      0xcb, 0x7c, 0x42, 0x3c};
+
+  struct gcm_data gdata;
+
+  uint8_t gcm_IV[GCM_IV_LEN] = {0xb3, 0xd8, 0xcc, 0x01, 0x7c, 0xbb, 0x89, 0xb3,
+                                0x9e, 0x0f, 0x67, 0xe2, 0x0,  0x0,  0x0,  0x1};
+
+// Ironic as it is this needs to be public for nexus to have direct access,
+// perhaps the design should change FIXME?
+// unsigned char secret[CRYPTO_GCM_KEY_LEN];
+// uint16_t secret_size;
 // BIGNUM *secret
 #endif /* SECURE */
 

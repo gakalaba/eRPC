@@ -20,9 +20,7 @@
 #include "util/timer.h"
 #include "util/udp_client.h"
 
-#ifdef SECURE
-#include "crypto.h"
-#endif
+#include <isa-l_crypto/aes_gcm.h>
 
 namespace erpc {
 
@@ -192,10 +190,15 @@ class Rpc {
    * @param rem_rpc_id The ID of the remote Rpc object
    */
   int create_session(std::string remote_uri, uint8_t rem_rpc_id) {
+    int session_num = create_session_st(remote_uri, rem_rpc_id);
 #ifdef SECURE
-    aesni_gcm128_pre(gcm_key, &gdata);
+    // Make sure the session creation didn't fail
+    if (session_num >= 0) {
+      Session *session = session_vec[static_cast<size_t>(session_num)];
+      aesni_gcm128_pre(session->gcm_key, &(session->gdata));
+    }
 #endif
-    return create_session_st(remote_uri, rem_rpc_id);
+    return session_num;
   }
 
   /**
