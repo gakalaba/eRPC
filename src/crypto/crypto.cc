@@ -1,3 +1,4 @@
+"
 #include "crypto.h"
 #include "common.h"
 #ifdef CRYPTO_VERBOSE
@@ -148,4 +149,4 @@ int aes_gcm_decrypt(unsigned char *data_buf, int data_len,
 
   return ret;
 }
-}  // namespace erpc
+}  // namespace erpc"

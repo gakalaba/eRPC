@@ -3,7 +3,7 @@
 #ifndef __CRYPTO__
 #define __CRYPTO__
 
-
+/*
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 
@@ -12,7 +12,7 @@
 #include <openssl/bn.h>
 #include <openssl/engine.h>
 
-
+*/
 #include <assert.h>
 #include <isa-l_crypto/aes_gcm.h>
 
