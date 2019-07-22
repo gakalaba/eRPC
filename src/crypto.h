@@ -3,31 +3,35 @@
 #ifndef __CRYPTO__
 #define __CRYPTO__
 
-/*
-#include <openssl/bio.h>
-#include <openssl/evp.h>
-
-#include <openssl/ssl.h>
-#include <openssl/dh.h>
-#include <openssl/bn.h>
-#include <openssl/engine.h>
-
-*/
 #include <assert.h>
 #include <isa-l_crypto/aes_gcm.h>
-
-
-#define CRYPTO_IV_LEN 12u
-#define CRYPTO_TAG_LEN 16u
-#define CRYPTO_GCM_KEY_LEN 32u
-#define CRYPTO_GCM_HEX_KEY_LEN 66u
-
+#include <common.h>
 
 namespace erpc {
-// Shared key for each eRPC session. This should _eventually_ be negotiated
-// using a secure handshake
 
-static const size_t CRYPTO_HDR_LEN { CRYPTO_IV_LEN + CRYPTO_TAG_LEN  };
+// Forward declarations for friendship
+class Session;
+
+template <typename T>
+class Rpc;
+
+class crypto {
+  friend class CTransport;
+  friend class Rpc<CTransport>;
+  friend class Session;
+
+ public:
+  uint8_t gcm_key[GCM_128_KEY_LEN] = {};
+  struct gcm_data gdata;
+  uint8_t gcm_IV[GCM_IV_LEN] = {};
+ private:
+  inline int tags_equal(uint8_t *received, uint8_t *current) const {
+    for (size_t i = 0; i < MAX_TAG_LEN; i++) {
+      if (received[i] != current[i]) return -1;
+    }
+    return 0;
+  }
+};
 
 }  // namespace erpc
 

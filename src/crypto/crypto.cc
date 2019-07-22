@@ -1,5 +1,4 @@
-"
-#include "crypto.h"
+//#include "crypto.h"
 #include "common.h"
 #ifdef CRYPTO_VERBOSE
 #include <iostream>
