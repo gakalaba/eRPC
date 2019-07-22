@@ -45,6 +45,7 @@ void Rpc<TTr>::bury_session_st(Session *session) {
   //
   // XXX: Which other MsgBuffers do we need to free? Which MsgBuffers are
   // guaranteed to have been freed at this point?
+
   if (session->is_server()) {
     for (const SSlot &sslot : session->sslot_arr) {
       free_msg_buffer(sslot.pre_resp_msgbuf);  // Prealloc buf is always valid

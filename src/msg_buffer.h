@@ -111,22 +111,29 @@ class MsgBuffer {
   MsgBuffer(Buffer buffer, Buffer encrypted_buffer, size_t max_data_size,
             size_t max_num_pkts)
       : buffer(buffer),
+#ifdef SECURE
         encrypted_buffer(encrypted_buffer),
+#endif
         max_data_size(max_data_size),
         data_size(max_data_size),
         max_num_pkts(max_num_pkts),
         num_pkts(max_num_pkts),
+#ifdef SECURE
         encrypted_buf(encrypted_buffer.buf + max_num_pkts * sizeof(pkthdr_t)),
+#endif
         buf(buffer.buf + max_num_pkts * sizeof(pkthdr_t)) {
     assert(buffer.buf != nullptr);    // buffer must be valid
+#ifdef SECURE
     assert(encrypted_buffer.buf != nullptr);  // crypto buffer must be valid
+#endif
     // data_size can be 0
     assert(max_num_pkts >= 1);
     assert(buffer.class_size >=
            max_data_size + max_num_pkts * sizeof(pkthdr_t));
+#ifdef SECURE
     assert(encrypted_buffer.class_size >=
            max_data_size + max_num_pkts * sizeof(pkthdr_t));
-
+#endif
 
     pkthdr_t *pkthdr_0 = this->get_pkthdr_0();
     pkthdr_0->magic = kPktHdrMagic;
@@ -145,12 +152,7 @@ class MsgBuffer {
         data_size(max_data_size),
         max_num_pkts(1),
         num_pkts(1),
-#ifdef SECURE
-        encrypted_buf(reinterpret_cast<uint8_t *>(pkthdr) + sizeof(pkthdr_t)),
-        buf(buffer.buf + sizeof(pkthdr_t)) {
-#else
         buf(reinterpret_cast<uint8_t *>(pkthdr) + sizeof(pkthdr_t)) {
-#endif
     assert(pkthdr->check_magic());  // pkthdr is the zeroth header
     // max_data_size can be zero for control packets, so can't assert
 
@@ -183,18 +185,22 @@ class MsgBuffer {
   /// The optional backing hugepage buffer. buffer.buf points to the zeroth
   /// packet header, i.e., not application data.
   Buffer buffer;
+#ifdef SECURE
   /// The backing hugepage buffer for the encrypted data that is sent over
   //  the network. encrypted_buffer.buf points to the zeroth packet header.
   Buffer encrypted_buffer;
-  
+#endif
+
   // Size info
   size_t max_data_size;  ///< Max data bytes in the MsgBuffer
   size_t data_size;      ///< Current data bytes in the MsgBuffer
   size_t max_num_pkts;   ///< Max number of packets in this MsgBuffer
   size_t num_pkts;       ///< Current number of packets in this MsgBuffer
 
+#ifdef SECURE
   /// Pointer to the first encrypted application data byte.
   uint8_t *encrypted_buf;
+#endif
 
  public:
   /// Pointer to the first application data byte. The message buffer is invalid

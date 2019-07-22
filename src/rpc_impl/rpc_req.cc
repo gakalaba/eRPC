@@ -2,6 +2,7 @@
 
 #include <isa-l_crypto/aes_gcm.h>
 #include "rpc.h"
+
 namespace erpc {
 
 // The cont_etid parameter is passed only when the event loop processes the
@@ -22,6 +23,7 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
   // If we're here, we're in the dispatch thread
   Session *session = session_vec[static_cast<size_t>(session_num)];
   assert(session->is_connected());  // User is notified before we disconnect
+
   // If a free sslot is unavailable, save to session backlog
   if (unlikely(session->client_info.sslot_free_vec.size() == 0)) {
     session->client_info.enq_req_backlog.emplace(session_num, req_type,
@@ -65,6 +67,7 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
       pkthdr_i->pkt_num = i;
     }
   }
+
 #ifdef SECURE
   // Zero out the MAC/TAG field in the added pkthdr field
   memset(req_msgbuf->get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);

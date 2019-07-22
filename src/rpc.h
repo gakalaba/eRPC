@@ -135,17 +135,25 @@ class Rpc {
     lock_cond(&huge_alloc_lock);
     Buffer buffer =
         huge_alloc->alloc(max_num_pkts * sizeof(pkthdr_t) + max_data_size);
+#ifdef SECURE
     Buffer encrypted_buffer =
         huge_alloc->alloc(max_num_pkts * sizeof(pkthdr_t) + max_data_size);
+#endif
     unlock_cond(&huge_alloc_lock);
-
+#ifdef SECURE
     if (unlikely(buffer.buf == nullptr || encrypted_buffer.buf == nullptr)) {
+#else
+    if (unlikely(buffer.buf == nullptr)) {
+#endif
       MsgBuffer msg_buffer;
       msg_buffer.buf = nullptr;
       return msg_buffer;
     }
-
+#ifdef SECURE
     MsgBuffer msg_buffer(buffer, encrypted_buffer, max_data_size, max_num_pkts);
+#else
+    MsgBuffer msg_buffer(buffer, max_data_size, max_num_pkts);
+#endif
     return msg_buffer;
   }
 
@@ -174,7 +182,9 @@ class Rpc {
   inline void free_msg_buffer(MsgBuffer msg_buffer) {
     lock_cond(&huge_alloc_lock);
     huge_alloc->free_buf(msg_buffer.buffer);
+#ifdef SECURE
     huge_alloc->free_buf(msg_buffer.encrypted_buffer);
+#endif
     unlock_cond(&huge_alloc_lock);
   }
 
@@ -491,11 +501,15 @@ class Rpc {
     if (unlikely(req_msgbuf.is_dynamic())) {
       free_msg_buffer(req_msgbuf);
       req_msgbuf.buffer.buf = nullptr;  // Mark invalid for future
+#ifdef SECURE
       req_msgbuf.encrypted_buffer.buf = nullptr;
+#endif
     }
 
     req_msgbuf.buf = nullptr;
+#ifdef SECURE
     req_msgbuf.encrypted_buf = nullptr;
+#endif
   }
 
   //

@@ -78,8 +78,7 @@ static std::string sm_pkt_type_str(SmPktType sm_pkt_type) {
     case SmPktType::kConnectReq: return "[Connect request]";
     case SmPktType::kConnectResp: return "[Connect response]";
     case SmPktType::kDisconnectReq: return "[Disconnect request]";
-    case SmPktType::kDisconnectResp:
-      return "[Disconnect response]";
+    case SmPktType::kDisconnectResp: return "[Disconnect response]";
   };
 
   throw std::runtime_error("Invalid session management packet type.");
