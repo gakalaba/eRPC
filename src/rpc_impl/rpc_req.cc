@@ -69,9 +69,9 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
   }
 
 #ifdef SECURE
-  // Zero out the MAC/TAG field in the added pkthdr field
-  memset(req_msgbuf->get_pkthdr_0()->authentication_tag, 0, kMaxTagLen);
+  // After zeroing out the MAC/TAG field in the added pkthdr field,
   // Encrypt the request msgbuffer application data
+  memset(req_msgbuf->get_pkthdr_0()->authentication_tag, 0, kMaxTagLen);
   uint8_t tag_to_send[kMaxTagLen];
   uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf->get_last_pkthdr());
   aesni_gcm128_enc(&(session->gdata), req_msgbuf->encrypted_buf,
@@ -146,21 +146,21 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
   sslot->server_info.req_func_type = req_func.req_func_type;
 
 #ifdef SECURE
-  // We need an RX ring--independent copy of
-  // the request. The allocated req_msgbuf is freed by the background thread.
+  // We need an RX ring--independent copy of the request. The allocated
+  // req_msgbuf is freed by the background thread. The header is copied
+  // to the encrypted buffer for transport, along with the encrypted data
   req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
   assert(req_msgbuf.buf != nullptr);
-  // Copy Header to encrypted MsgBuffer for transport as well as encrypted data
   memcpy(req_msgbuf.get_pkthdr_0(), pkthdr,
          sizeof(pkthdr_t) + pkthdr->msg_size);
-  // Upon receiving, save the MAC/TAG field
+
+  // Upon receiving the entire message, first save the MAC/TAG. Then
+  // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
+  // the encrypted msgbuf into the public buf
   uint8_t received_tag[kMaxTagLen];
   memcpy(received_tag, pkthdr->authentication_tag, kMaxTagLen);
-  // Then Zero out the MAC/TAG field in the 0th pkthdr
   memset(pkthdr->authentication_tag, 0, kMaxTagLen);
-  // Decrypt the encrypted msgbuf into the public one
   uint8_t current_tag[kMaxTagLen];
-  // The additional data is the pkthdr, this is authenticated
   uint8_t *AAD = reinterpret_cast<uint8_t *>(pkthdr);
   aesni_gcm128_dec(&(sslot->session->gdata), req_msgbuf.buf,
                    req_msgbuf.encrypted_buf, pkthdr->msg_size,
@@ -285,13 +285,13 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
 
   if (sslot->server_info.num_rx != req_msgbuf.num_pkts) return;
 #ifdef SECURE
-  // Upon receiving, save the MAC/TAG field
+  // Upon receiving the entire message, first save the MAC/TAG. Then
+  // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
+  // the encrypted msgbuf into the public buf
   uint8_t received_tag[kMaxTagLen];
   memcpy(received_tag, req_msgbuf.get_pkthdr_0()->authentication_tag,
          kMaxTagLen);
-  // Then Zero out the MAC/TAG field in the 0th pkthdr
   memset(req_msgbuf.get_pkthdr_0()->authentication_tag, 0, kMaxTagLen);
-  // Decrypt the received request buffer
   uint8_t current_tag[kMaxTagLen];
   uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf.get_last_pkthdr());
   aesni_gcm128_dec(&(sslot->session->gdata), req_msgbuf.buf,

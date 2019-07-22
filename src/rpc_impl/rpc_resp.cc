@@ -58,9 +58,9 @@ void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
     }
   }
 #ifdef SECURE
-  // Zero out the MAC/TAG field in the added pkthdr field
+  // After zeroing out the MAC/TAG field in the added pkthdr field,
+  // Encrypt the request msgbuffer application data
   memset(resp_msgbuf->get_pkthdr_0()->authentication_tag, 0, kMaxTagLen);
-  // Encrypt the response msgbuffer application data
   uint8_t tag_to_send[kMaxTagLen];
   uint8_t *AAD = reinterpret_cast<uint8_t *>(resp_msgbuf->get_last_pkthdr());
   aesni_gcm128_enc(&(session->gdata), resp_msgbuf->encrypted_buf,
@@ -176,13 +176,13 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
   }
 
 #ifdef SECURE
-  // Upon receiving the entire message, first save the MAC/TAG
+  // Upon receiving the entire message, first save the MAC/TAG. Then
+  // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
+  // the encrypted msgbuf into the public buf
   uint8_t received_tag[kMaxTagLen];
   memcpy(received_tag, resp_msgbuf->get_pkthdr_0()->authentication_tag,
          kMaxTagLen);
-  // Then Zero out the MAC/TAG field in the 0th pkthdr
   memset(resp_msgbuf->get_pkthdr_0()->authentication_tag, 0, kMaxTagLen);
-  // Then decrypt the encrypted msgbuf into the public buf
   uint8_t current_tag[kMaxTagLen];
   uint8_t *AAD = reinterpret_cast<uint8_t *>(resp_msgbuf->get_last_pkthdr());
   aesni_gcm128_dec(
