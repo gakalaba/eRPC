@@ -59,17 +59,14 @@ void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
   }
 #ifdef SECURE
   // After zeroing out the MAC/TAG field in the added pkthdr field,
-  // Encrypt the request msgbuffer application data
+  // Encrypt the request msgbuffer application data, and copy over
+  // the computed MAC into the field
   memset(resp_msgbuf->get_pkthdr_0()->authentication_tag, 0, kMaxTagLen);
-  uint8_t tag_to_send[kMaxTagLen];
   uint8_t *AAD = reinterpret_cast<uint8_t *>(resp_msgbuf->get_last_pkthdr());
   aesni_gcm128_enc(&(session->gdata), resp_msgbuf->encrypted_buf,
                    resp_msgbuf->buf, resp_msgbuf->data_size, session->gcm_IV,
-                   AAD, resp_msgbuf->num_pkts * sizeof(pkthdr_t), tag_to_send,
-                   kMaxTagLen);
-  // Copy over the computed MAC into the field
-  memcpy(resp_msgbuf->get_pkthdr_0()->authentication_tag, tag_to_send,
-         kMaxTagLen);
+                   AAD, resp_msgbuf->num_pkts * sizeof(pkthdr_t),
+		   resp_msgbuf->get_pkthdr_0()->authentication_tag, kMaxTagLen);
 #endif
   // Fill in the slot and reset queueing progress
   assert(sslot->tx_msgbuf == nullptr);  // Buried before calling request handler

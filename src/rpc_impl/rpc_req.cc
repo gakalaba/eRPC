@@ -70,17 +70,14 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
 
 #ifdef SECURE
   // After zeroing out the MAC/TAG field in the added pkthdr field,
-  // Encrypt the request msgbuffer application data
+  // Encrypt the request msgbuffer application data, and copy over
+  // the computed MAC into the field
   memset(req_msgbuf->get_pkthdr_0()->authentication_tag, 0, kMaxTagLen);
-  uint8_t tag_to_send[kMaxTagLen];
   uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf->get_last_pkthdr());
   aesni_gcm128_enc(&(session->gdata), req_msgbuf->encrypted_buf,
                    req_msgbuf->buf, req_msgbuf->data_size, session->gcm_IV,
                    AAD, req_msgbuf->num_pkts*sizeof(pkthdr_t),
-                   tag_to_send, kMaxTagLen);
-  // Copy over the computed MAC into the MAC/TAG field in pkthdr
-  memcpy(req_msgbuf->get_pkthdr_0()->authentication_tag, tag_to_send,
-         kMaxTagLen);
+		   req_msgbuf->get_pkthdr_0()->authentication_tag, kMaxTagLen);
 #endif /* SECURE */
   if (likely(session->client_info.credits > 0)) {
     kick_req_st(&sslot);
