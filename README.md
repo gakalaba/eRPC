@@ -84,8 +84,7 @@ Some highlights:
    `num_processes` specifies the total number of eRPC processes in the cluster.
  * The URIs of eRPC processes in the cluster are specified in
    `scripts/autorun_process_file`. Each line in this file must be
-   `<hostname> <management udp port> <numa_node>`. See
-   `scripts/gen_autorun_process_file.sh` for how to generate this file.
+   `<hostname> <management udp port> <numa_node>`.
  * Run `scripts/do.sh` for each process:
    * With single-CPU machines: `num_processes` machines are needed.
      Run `scripts/do.sh <i> 0` on machine `i` in `{0, ..., num_processes - 1}`.
@@ -93,8 +92,9 @@ Some highlights:
      are needed. Run `scripts/do.sh <i> <i % 2>` on machine i in
      `{0, ..., num_machines - 1}`.
  * To automatically run an application at all processes in
-   `scripts/autorun_process_file`, run `scripts/run-all.sh`. Application
-   statistics generated in a run can be collected using `scripts/proc-out.sh`.
+   `scripts/autorun_process_file`, run `scripts/run-all.sh`. For some
+   applications, statistics generated in a run can be collected and processed
+   using `scripts/proc-out.sh`.
 
 ## Getting help
  * GitHub issues are preferred over email. Please include the following
