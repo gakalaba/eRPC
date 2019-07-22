@@ -108,8 +108,12 @@ class MsgBuffer {
   /// Construct a MsgBuffer with a dynamic Buffer allocated by eRPC.
   /// The zeroth packet header is stored at \p buffer.buf. \p buffer must have
   /// space for at least \p max_data_bytes, and \p max_num_pkts packet headers.
+#ifdef SECURE
   MsgBuffer(Buffer buffer, Buffer encrypted_buffer, size_t max_data_size,
             size_t max_num_pkts)
+#else
+  MsgBuffer(Buffer buffer, size_t max_data_size, size_t max_num_pkts)
+#endif
       : buffer(buffer),
 #ifdef SECURE
         encrypted_buffer(encrypted_buffer),
