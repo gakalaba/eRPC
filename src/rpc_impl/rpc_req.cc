@@ -70,7 +70,7 @@ void Rpc<TTr>::enqueue_request(int session_num, uint8_t req_type,
   memset(req_msgbuf->get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);
   // Encrypt the request msgbuffer application data
   uint8_t tag_to_send[MAX_TAG_LEN];
-  uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf->get_first_pkthdr());
+  uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf->get_last_pkthdr());
   aesni_gcm128_enc(&(session->gdata), req_msgbuf->encrypted_buf,
                    req_msgbuf->buf, req_msgbuf->data_size, session->gcm_IV,
                    AAD, req_msgbuf->num_pkts*sizeof(pkthdr_t),
@@ -164,7 +164,7 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
                    sslot->session->gcm_IV, AAD, sizeof(pkthdr_t),
                    current_tag, MAX_TAG_LEN);
   // Compare tags to authenticate application data
-  assert(req_msgbuf.tags_equal(received_tag, current_tag, MAX_TAG_LEN) == 0);
+  assert(memcmp(received_tag, current_tag, MAX_TAG_LEN) == 0);
 #endif
 
   if (likely(!req_func.is_background())) {
@@ -288,14 +288,14 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   memset(req_msgbuf.get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);
   // Decrypt the received request buffer
   uint8_t current_tag[MAX_TAG_LEN];
-  uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf.get_first_pkthdr());
+  uint8_t *AAD = reinterpret_cast<uint8_t *>(req_msgbuf.get_last_pkthdr());
   aesni_gcm128_dec(&(sslot->session->gdata), req_msgbuf.buf,
                    req_msgbuf.encrypted_buf, pkthdr->msg_size,
                    sslot->session->gcm_IV,
                    AAD, req_msgbuf.num_pkts*sizeof(pkthdr_t),
                    current_tag, MAX_TAG_LEN);
   // Compare tags to authenticate application data
-  assert(req_msgbuf.tags_equal(received_tag, current_tag, MAX_TAG_LEN) == 0);
+  assert(memcmp(received_tag, current_tag, MAX_TAG_LEN) == 0);
 #endif
   const ReqFunc &req_func = req_func_arr[pkthdr->req_type];
 

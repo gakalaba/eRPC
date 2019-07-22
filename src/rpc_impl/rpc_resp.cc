@@ -12,7 +12,6 @@ template <class TTr>
 void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
   SSlot *sslot = static_cast<SSlot *>(req_handle);
   Session *session = sslot->session;
-  _unused(encrypt);
 
   // When called from a background thread, enqueue to the foreground thread
   if (unlikely(!in_dispatch())) {
@@ -63,7 +62,7 @@ void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
   memset(resp_msgbuf->get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);
   // Encrypt the response msgbuffer application data
   uint8_t tag_to_send[MAX_TAG_LEN];
-  uint8_t *AAD = reinterpret_cast<uint8_t *>(resp_msgbuf->get_first_pkthdr());
+  uint8_t *AAD = reinterpret_cast<uint8_t *>(resp_msgbuf->get_last_pkthdr());
   aesni_gcm128_enc(&(session->gdata), resp_msgbuf->encrypted_buf,
                    resp_msgbuf->buf, resp_msgbuf->data_size, session->gcm_IV,
                    AAD, resp_msgbuf->num_pkts * sizeof(pkthdr_t), tag_to_send,
@@ -107,9 +106,6 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
   bump_credits(sslot->session);
   ci.num_rx++;
   ci.progress_tsc = ev_loop_tsc;
-
-  // TODO: Ensure that resizing resp buffer to req buffer - hdrlen does
-  // not cause overwrites/memory corruption anywhere
 
   // Special handling for single-packet responses
   if (likely(pkthdr->msg_size <= TTr::kMaxDataPerPkt)) {
@@ -188,13 +184,13 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
   memset(resp_msgbuf->get_pkthdr_0()->authentication_tag, 0, MAX_TAG_LEN);
   // Then decrypt the encrypted msgbuf into the public buf
   uint8_t current_tag[MAX_TAG_LEN];
-  uint8_t *AAD = reinterpret_cast<uint8_t *>(resp_msgbuf->get_first_pkthdr());
+  uint8_t *AAD = reinterpret_cast<uint8_t *>(resp_msgbuf->get_last_pkthdr());
   aesni_gcm128_dec(
       &(session->gdata), resp_msgbuf->buf, resp_msgbuf->encrypted_buf,
       resp_msgbuf->data_size, session->gcm_IV, AAD,
       resp_msgbuf->num_pkts * sizeof(pkthdr_t), current_tag, MAX_TAG_LEN);
   // Compare the received tag to the current tag to authenticate app data
-  assert(resp_msgbuf->tags_equal(received_tag, current_tag, MAX_TAG_LEN) == 0);
+  assert(memcmp(received_tag, current_tag, MAX_TAG_LEN) == 0);
 #endif
   if (likely(_cont_etid == kInvalidBgETid)) {
     _cont_func(context, _tag);

@@ -111,12 +111,6 @@ endif(TESTING)
 if(SECURE)
   message(STATUS "Encryption is enabled. This is an experimental feature and may break things.")
   add_definitions(-DSECURE=true)
-  #find_library(SSL_LIB ssl)
-
-  #if(NOT SSL_LIB)
-  #  message(FATAL_ERROR "openssl not found")
-  #endif()
-
   set(LIBRARIES ${LIBRARIES} isal_crypto crypto)
 else(SECURE)
   message(STATUS "Encryption is disabled. Compiling without AES/OpenSSL support")
@@ -170,10 +164,6 @@ if(Boost_FOUND)
 else()
   message(FATAL_ERROR "Boost not found.")
 endif()
-
-#if(SECURE)
-#  set(SOURCES ${SOURCES} src/crypto/crypto.cc)
-#endif(SECURE)
 
 # Transport-specific. Mellanox OFED drivers are the best choice for raw and
 # infiniband, but they do not play well with DPDK. So we compile only one

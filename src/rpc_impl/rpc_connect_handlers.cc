@@ -120,29 +120,6 @@ void Rpc<TTr>::handle_connect_req_st(const SmPkt &sm_pkt) {
 
   // Add server endpoint info created above to resp. No need to add client info.
   SmPkt resp_sm_pkt = sm_construct_resp(sm_pkt, SmErrType::kNoError);
-#ifdef SECURE
-/*
-BIGNUM *peer_key;
-if (0 == (BN_hex2bn(&peer_key, &sm_pkt.pub_key[0]))) {
-  sm_pkt_udp_tx_st(sm_construct_resp(sm_pkt, SmErrType::kCryptoError));
-  return;
-}
-if (0 > (session->secret_size =
-             DH_compute_key(&session->secret[0], peer_key, dh))) {
-  sm_pkt_udp_tx_st(sm_construct_resp(sm_pkt, SmErrType::kCryptoError));
-  return;
-}
-const BIGNUM *pub_key;
-DH_get0_key(dh, &pub_key, nullptr);
-char *key = BN_bn2hex(pub_key);
-if (key == nullptr) {
-  sm_pkt_udp_tx_st(sm_construct_resp(sm_pkt, SmErrType::kCryptoError));
-  return;
-}
-memcpy(&resp_sm_pkt.pub_key[0], key, CRYPTO_GCM_HEX_KEY_LEN);
-*/
-#endif /* SECURE */
-
   alloc_ring_entries();
   session_vec.push_back(session);  // Add to list of all sessions
 
@@ -239,20 +216,6 @@ void Rpc<TTr>::handle_connect_resp_st(const SmPkt &sm_pkt) {
   session->state = SessionState::kConnected;
 
   session->client_info.cc.prev_desired_tx_tsc = rdtsc();
-#ifdef SECURE
-/*
-if (sm_pkt.pkt_type == SmPktType::kConnectResp) {
-  BIGNUM *peer_key;
-  if (0 == (BN_hex2bn(&peer_key, &sm_pkt.pub_key[0]))) {
-    assert(0);  // FIXME
-  }
-  if (0 > (session->secret_size =
-               DH_compute_key(&session->secret[0], peer_key, dh))) {
-    assert(0);  // FIXME
-  }
-}
-*/
-#endif /* SECURE */
 
   ERPC_INFO("%s: None. Session connected.\n", issue_msg);
   sm_handler(session->local_session_num, SmEventType::kConnected,

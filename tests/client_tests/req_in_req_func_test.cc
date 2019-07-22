@@ -142,7 +142,6 @@ void primary_cont_func(void *_c, void *_tag) {
   // Extract the request info
   size_t req_size_cp = srv_req_info->req_size_cp;
   ReqHandle *req_handle_cp = srv_req_info->req_handle_cp;
-
   assert(resp_msgbuf_pb.get_data_size() == req_size_cp);
 
   // Check the response from server #1

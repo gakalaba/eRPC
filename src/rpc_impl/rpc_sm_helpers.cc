@@ -50,9 +50,6 @@ void Rpc<TTr>::bury_session_st(Session *session) {
       free_msg_buffer(sslot.pre_resp_msgbuf);  // Prealloc buf is always valid
     }
   }
-#ifdef SECURE
-  //memset(&session->secret, 0, CRYPTO_GCM_KEY_LEN);
-#endif /* SECURE */
 
   session_vec.at(session->local_session_num) = nullptr;
   delete session;  // This does nothing except free the session memory
@@ -85,18 +82,6 @@ void Rpc<TTr>::send_sm_req_st(Session *session) {
   sm_pkt.uniq_token = session->uniq_token;
   sm_pkt.client = session->client;
   sm_pkt.server = session->server;
-#ifdef SECURE
-  /*
-  const BIGNUM *pub_key;
-  DH_get0_key(dh, &pub_key, nullptr);
-  char *key = BN_bn2hex(pub_key);
-  if (key == nullptr) {
-    assert(0);  // FIXME
-    return;
-  }
-  memcpy(&sm_pkt.pub_key[0], key, CRYPTO_GCM_HEX_KEY_LEN);
-*/
-#endif /* SECURE */
 
   sm_pkt_udp_tx_st(sm_pkt);
 }

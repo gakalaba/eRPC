@@ -46,35 +46,6 @@ Rpc<TTr>::Rpc(Nexus *nexus, void *context, uint8_t rpc_id,
     }
   }
 
-#ifdef SECURE
-/*
-  int codes, res;
-  if (nullptr == (dh = DH_new())) {
-    delete huge_alloc;
-    throw std::runtime_error("Failed to alloc Memory for key exchange");
-  }
-  if (1 != DH_generate_parameters_ex(dh, 2048, DH_GENERATOR_2, nullptr)) {
-    delete huge_alloc;
-    DH_free(dh);
-    throw std::runtime_error("Failed to alloc Memory for key exchange");
-  }
-
-  res = DH_check(dh, &codes);
-  if (codes != 0 || res != 1) {
-    delete huge_alloc;
-    DH_free(dh);
-    throw std::runtime_error("DH_check Failed");
-  }
-*/
-  /* Generate the public and private key pair */
-  //if (1 != DH_generate_key(dh)) {
-  //  delete huge_alloc;
-  //  DH_free(dh);
-  //  throw std::runtime_error("DH_generate_key Failed");
-  //}
-// assert(DH_size(dh) == CRYPTO_GCM_HEX_KEY_LEN);
-#endif /* SECURE */
-
   // Partially initialize the transport without using hugepages. This
   // initializes the transport's memory registration functions required for
   // the hugepage allocator.
@@ -131,10 +102,6 @@ Rpc<TTr>::~Rpc() {
   for (Session *session : session_vec) {
     if (session != nullptr) delete session;
   }
-
-#ifdef SECURE
-  //DH_free(dh);
-#endif /* SECURE */
 
   ERPC_INFO("Destroying Rpc %u.\n", rpc_id);
 

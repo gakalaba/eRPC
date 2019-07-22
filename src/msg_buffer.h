@@ -51,7 +51,7 @@ class MsgBuffer {
   }
 
   /// Return a pointer to the first packet header of this MsgBuffer
-  inline pkthdr_t *get_first_pkthdr() const {
+  inline pkthdr_t *get_last_pkthdr() const {
 #ifdef SECURE
     return reinterpret_cast<pkthdr_t *>(encrypted_buf - num_pkts * sizeof(pkthdr_t));
 #else
@@ -70,13 +70,6 @@ class MsgBuffer {
 
   std::string get_pkthdr_str(size_t pkt_idx) const {
     return get_pkthdr_n(pkt_idx)->to_string();
-  }
-
-  inline int tags_equal(uint8_t *received, uint8_t *current, size_t n) const {
-    for (size_t i = 0; i < n; i++) {
-      if (received[i] != current[i]) return -1;
-    }
-    return 0;
   }
 
   /// Basic validity check that every MsgBuffer must satisfy

@@ -69,12 +69,6 @@ class Session {
 
   uint8_t gcm_IV[GCM_IV_LEN] = {0xb3, 0xd8, 0xcc, 0x01, 0x7c, 0xbb, 0x89, 0xb3,
                                 0x9e, 0x0f, 0x67, 0xe2, 0x0,  0x0,  0x0,  0x1};
-
-// Ironic as it is this needs to be public for nexus to have direct access,
-// perhaps the design should change FIXME?
-// unsigned char secret[CRYPTO_GCM_KEY_LEN];
-// uint16_t secret_size;
-// BIGNUM *secret
 #endif /* SECURE */
 
  private:

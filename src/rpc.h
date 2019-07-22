@@ -944,9 +944,6 @@ class Rpc {
   const size_t rpc_rto_cycles;  ///< RPC RTO in cycles
   const size_t rpc_pkt_loss_scan_cycles;  ///< Packet loss scan frequency
 
-#ifdef SECURE
-  //DH *dh;
-#endif /* SECURE */
   /// A copy of the request/response handlers from the Nexus. We could use
   /// a pointer instead, but an array is faster.
   const std::array<ReqFunc, kReqTypeArraySize> req_func_arr;
