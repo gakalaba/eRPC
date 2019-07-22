@@ -21,6 +21,8 @@
 #include "rpc_constants.h"
 #include "tweakme.h"
 
+#include <isa-l_crypto/aes_gcm.h>
+
 namespace erpc {
 
 #define _unused(x) ((void)(x))  // Make production build happy
@@ -35,6 +37,11 @@ namespace erpc {
 static constexpr bool kTesting = false;
 #else
 static constexpr bool kTesting = TESTING;
+#endif
+
+#ifdef SECURE
+/// Maximum length for authentication tag if encryption is enabled
+static constexpr size_t kMaxTagLen = MAX_TAG_LEN;
 #endif
 
 // General constants
