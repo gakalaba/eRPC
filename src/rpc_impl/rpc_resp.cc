@@ -57,17 +57,6 @@ void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
       resp_pkthdr_i->pkt_num = resp_pkthdr_0->pkt_num + i;
     }
   }
-#ifdef SECURE
-  // After zeroing out the MAC/TAG field in the added pkthdr field,
-  // Encrypt the request msgbuffer application data, and copy over
-  // the computed MAC into the field
-  memset(resp_msgbuf->get_pkthdr_0()->authentication_tag, 0, kMaxTagLen);
-  uint8_t *AAD = reinterpret_cast<uint8_t *>(resp_msgbuf->get_last_pkthdr());
-  aesni_gcm128_enc(&(session->gdata), resp_msgbuf->encrypted_buf,
-                   resp_msgbuf->buf, resp_msgbuf->data_size, session->gcm_IV,
-                   AAD, resp_msgbuf->num_pkts * sizeof(pkthdr_t),
-		   resp_msgbuf->get_pkthdr_0()->authentication_tag, kMaxTagLen);
-#endif
   // Fill in the slot and reset queueing progress
   assert(sslot->tx_msgbuf == nullptr);  // Buried before calling request handler
   sslot->tx_msgbuf = resp_msgbuf;       // Mark response as valid
@@ -131,12 +120,26 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
 
     // Hdr 0 was copied earlier, other headers are unneeded, so copy just data.
     const size_t pkt_idx = resp_ntoi(pkthdr->pkt_num, req_msgbuf->num_pkts);
-    copy_data_to_msgbuf(resp_msgbuf, pkt_idx, pkthdr);
+  // Decrypt and authenticate the packet received
 #ifdef SECURE
-    // Copy over the other nonzero packet headers as well, to be authenticated
-    memcpy(resp_msgbuf->get_pkthdr_n(pkt_idx), pkthdr, sizeof(pkthdr_t));
+  // Upon receiving the entire message, first save the MAC/TAG. Then
+  // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
+  // the encrypted msgbuf into the public buf
+  uint8_t received_tag[kMaxTagLen];
+  memcpy(received_tag, pkthdr->authentication_tag, kMaxTagLen);
+  memset(pkthdr->authentication_tag, 0, kMaxTagLen);
+  uint8_t current_tag[kMaxTagLen];
+  uint8_t *AAD = reinterpret_cast<uint8_t *>(pkthdr);
+  size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
+  aesni_gcm128_dec(&(sslot->session->gdata), &resp_msgbuf->buf[offset], pkthdr + 1,
+                   TTr::kMaxDataPerPkt, sslot->session->gcm_IV, AAD, sizeof(pkthdr_t),
+                   current_tag, kMaxTagLen);
+  // Compare the received tag to the current tag to authenticate app data
+  assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
+#else
+  // Header 0 was copied earlier. Request packet's index = packet number.
+  copy_data_to_msgbuf(resp_msgbuf, pkt_idx, pkthdr);
 #endif
-
     if (ci.num_rx != wire_pkts(req_msgbuf, resp_msgbuf)) return;
     // Else fall through to invoke continuation
   }
@@ -172,23 +175,6 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     session->client_info.enq_req_backlog.pop();
   }
 
-#ifdef SECURE
-  // Upon receiving the entire message, first save the MAC/TAG. Then
-  // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
-  // the encrypted msgbuf into the public buf
-  uint8_t received_tag[kMaxTagLen];
-  memcpy(received_tag, resp_msgbuf->get_pkthdr_0()->authentication_tag,
-         kMaxTagLen);
-  memset(resp_msgbuf->get_pkthdr_0()->authentication_tag, 0, kMaxTagLen);
-  uint8_t current_tag[kMaxTagLen];
-  uint8_t *AAD = reinterpret_cast<uint8_t *>(resp_msgbuf->get_last_pkthdr());
-  aesni_gcm128_dec(
-      &(session->gdata), resp_msgbuf->buf, resp_msgbuf->encrypted_buf,
-      resp_msgbuf->data_size, session->gcm_IV, AAD,
-      resp_msgbuf->num_pkts * sizeof(pkthdr_t), current_tag, kMaxTagLen);
-  // Compare the received tag to the current tag to authenticate app data
-  assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
-#endif
   if (likely(_cont_etid == kInvalidBgETid)) {
     _cont_func(context, _tag);
   } else {
