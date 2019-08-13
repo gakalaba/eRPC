@@ -153,7 +153,7 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
                    sslot->session->gcm_IV, AAD, sizeof(pkthdr_t), current_tag,
                    kMaxTagLen);
   // Compare tags to authenticate application data
-  //assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
+  assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
 #endif
 
   if (likely(!req_func.is_background())) {
@@ -274,13 +274,14 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   uint8_t current_tag[kMaxTagLen];
   uint8_t *AAD = reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
   size_t offset = pkthdr->pkt_num * TTr::kMaxDataPerPkt;
+  size_t length = std::min(TTr::kMaxDataPerPkt, pkthdr->msg_size - offset);
   aesni_gcm128_dec(&(sslot->session->gdata), &req_msgbuf.buf[offset], reinterpret_cast<const uint8_t *>(pkthdr + 1),
-                   TTr::kMaxDataPerPkt, sslot->session->gcm_IV, AAD, sizeof(pkthdr_t),
+                   length, sslot->session->gcm_IV, AAD, sizeof(pkthdr_t),
                    current_tag, kMaxTagLen);
   // Reset constantness
   memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag, kMaxTagLen);
   // Compare the received tag to the current tag to authenticate app data
-  //assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
+  assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
 #else
   // Header 0 was copied earlier. Request packet's index = packet number.
   copy_data_to_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);

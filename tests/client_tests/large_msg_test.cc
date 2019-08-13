@@ -125,9 +125,10 @@ void generic_test_func(Nexus *nexus, size_t) {
         MsgBuffer &cur_req_msgbuf = c.req_msgbufs[iter_req_i];
 
         // Generate request metadata
-        //size_t min_msg_size = sizeof(app_hdr_t) + sizeof(size_t);
-        size_t req_size = 8000;//get_rand_msg_size(&c.fastrand, rpc, min_msg_size);
-        size_t resp_size = 100;//get_rand_msg_size(&c.fastrand, rpc, min_msg_size);
+        size_t min_msg_size = sizeof(app_hdr_t) + sizeof(size_t);
+        size_t req_size = get_rand_msg_size(&c.fastrand, rpc, min_msg_size);
+        size_t resp_size = get_rand_msg_size(&c.fastrand, rpc, min_msg_size);
+        test_printf("**************req_size = %zu; resp_size = %zu\n", req_size, resp_size);
         uint8_t byte_contents = c.fastrand.next_u32() % UINT8_MAX;
 
         rpc->resize_msg_buffer(&cur_req_msgbuf, req_size);
@@ -172,7 +173,7 @@ void launch_helper() {
                                generic_test_func, reg_info_vec,
                                ConnectServers::kFalse, 0.0);
 }
-/*
+
 TEST(OneLargeRpc, Foreground) {
   config_num_iters = 1;
   config_num_sessions = 1;
@@ -196,7 +197,7 @@ TEST(MultiLargeRpcOneSession, Foreground) {
   config_num_bg_threads = 0;
   launch_helper();
 }
-*/
+
 TEST(MultiLargeRpcOneSession, Background) {
   config_num_iters = 1;
   config_num_sessions = 1;
@@ -204,9 +205,9 @@ TEST(MultiLargeRpcOneSession, Background) {
   config_num_bg_threads = 1;
   launch_helper();
 }
-/*
+
 TEST(MultiLargeRpcMultiSession, Foreground) {
-  assert(erpc::is_log_level_reasonable());
+  //assert(erpc::is_log_level_reasonable());
   config_num_iters = 2;
   config_num_sessions = 4;
   config_rpcs_per_session = kSessionReqWindow;
@@ -215,7 +216,7 @@ TEST(MultiLargeRpcMultiSession, Foreground) {
 }
 
 TEST(MultiLargeRpcMultiSession, Background) {
-  assert(erpc::is_log_level_reasonable());
+  //assert(erpc::is_log_level_reasonable());
   config_num_iters = 2;
   config_num_sessions = 4;
   config_rpcs_per_session = kSessionReqWindow;
@@ -224,7 +225,7 @@ TEST(MultiLargeRpcMultiSession, Background) {
 }
 
 TEST(DISABLED_MemoryLeak, Foreground) {
-  assert(erpc::is_log_level_reasonable());
+  //assert(erpc::is_log_level_reasonable());
   config_num_iters = 50;
   config_num_sessions = 4;
   config_rpcs_per_session = kSessionReqWindow;
@@ -233,14 +234,14 @@ TEST(DISABLED_MemoryLeak, Foreground) {
 }
 
 TEST(DISABLED_MemoryLeak, Background) {
-  assert(erpc::is_log_level_reasonable());
+  //assert(erpc::is_log_level_reasonable());
   config_num_iters = 50;
   config_num_sessions = 4;
   config_rpcs_per_session = kSessionReqWindow;
   config_num_bg_threads = 1;
   launch_helper();
 }
-*/
+
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

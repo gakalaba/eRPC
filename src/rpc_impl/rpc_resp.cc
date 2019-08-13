@@ -110,11 +110,11 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
   uint8_t current_tag[kMaxTagLen];
   uint8_t *AAD = reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
   aesni_gcm128_dec(&(sslot->session->gdata), resp_msgbuf->buf, reinterpret_cast<const uint8_t *>(pkthdr + 1),
-                   TTr::kMaxDataPerPkt, sslot->session->gcm_IV, AAD, sizeof(pkthdr_t),
+                   pkthdr->msg_size, sslot->session->gcm_IV, AAD, sizeof(pkthdr_t),
                    current_tag, kMaxTagLen);
   memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag, kMaxTagLen);
   // Compare the received tag to the current tag to authenticate app data
-  //assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
+  assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
 #else
   // Copy eRPC header and data (but not Transport headroom). The eRPC header
   // will be needed (e.g, to determine the request type) if the continuation
@@ -151,12 +151,13 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
   uint8_t current_tag[kMaxTagLen];
   uint8_t *AAD = reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
   size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
+  size_t length = std::min(TTr::kMaxDataPerPkt, pkthdr->msg_size - offset);
   aesni_gcm128_dec(&(sslot->session->gdata), &resp_msgbuf->buf[offset], reinterpret_cast<const uint8_t *>(pkthdr + 1),
-                   TTr::kMaxDataPerPkt, sslot->session->gcm_IV, AAD, sizeof(pkthdr_t),
+                   length, sslot->session->gcm_IV, AAD, sizeof(pkthdr_t),
                    current_tag, kMaxTagLen);
   memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag, kMaxTagLen);
   // Compare the received tag to the current tag to authenticate app data
-  //assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
+  assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
 #else
   // Header 0 was copied earlier. Request packet's index = packet number.
   copy_data_to_msgbuf(resp_msgbuf, pkt_idx, pkthdr);
