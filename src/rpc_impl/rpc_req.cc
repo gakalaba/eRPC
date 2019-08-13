@@ -262,8 +262,8 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   // Send a credit return for every request packet except the last in sequence
   if (pkthdr->pkt_num != req_msgbuf.num_pkts - 1) enqueue_cr_st(sslot, pkthdr);
 #ifdef SECURE
-  // Per packet, first save the MAC/TAG. Then zero out the MAC/TAG 
-  // field in the given pkthdr, and finally decrypt the encrypted 
+  // Per packet, first save the MAC/TAG. Then zero out the MAC/TAG
+  // field in the given pkthdr, and finally decrypt the encrypted
   // packet into the public buf
   uint8_t received_tag[kMaxTagLen];
   memcpy(received_tag, pkthdr->authentication_tag, kMaxTagLen);

@@ -145,8 +145,8 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     // Hdr 0 was copied earlier, other headers are unneeded, so copy just data.
     const size_t pkt_idx = resp_ntoi(pkthdr->pkt_num, req_msgbuf->num_pkts);
 #ifdef SECURE
-    // Per packet, first save the MAC/TAG. Then zero out the MAC/TAG 
-    // field in the given pkthdr, and finally decrypt the encrypted 
+    // Per packet, first save the MAC/TAG. Then zero out the MAC/TAG
+    // field in the given pkthdr, and finally decrypt the encrypted
     // pkt into the public buf
     uint8_t received_tag[kMaxTagLen];
     memcpy(received_tag, pkthdr->authentication_tag, kMaxTagLen);
