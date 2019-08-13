@@ -261,12 +261,10 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
 
   // Send a credit return for every request packet except the last in sequence
   if (pkthdr->pkt_num != req_msgbuf.num_pkts - 1) enqueue_cr_st(sslot, pkthdr);
-
-// Decrypt and authenticate the packet received
 #ifdef SECURE
-  // Upon receiving the entire message, first save the MAC/TAG. Then
-  // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
-  // the encrypted msgbuf into the public buf
+  // Per packet, first save the MAC/TAG. Then zero out the MAC/TAG 
+  // field in the given pkthdr, and finally decrypt the encrypted 
+  // packet into the public buf
   uint8_t received_tag[kMaxTagLen];
   memcpy(received_tag, pkthdr->authentication_tag, kMaxTagLen);
   // Temporarily cast away constantness of pkthdr to reset MAC field
@@ -275,11 +273,13 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   uint8_t *AAD = reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
   size_t offset = pkthdr->pkt_num * TTr::kMaxDataPerPkt;
   size_t length = std::min(TTr::kMaxDataPerPkt, pkthdr->msg_size - offset);
-  aesni_gcm128_dec(&(sslot->session->gdata), &req_msgbuf.buf[offset], reinterpret_cast<const uint8_t *>(pkthdr + 1),
-                   length, sslot->session->gcm_IV, AAD, sizeof(pkthdr_t),
-                   current_tag, kMaxTagLen);
+  aesni_gcm128_dec(&(sslot->session->gdata), &req_msgbuf.buf[offset],
+                   reinterpret_cast<const uint8_t *>(pkthdr + 1), length,
+                   sslot->session->gcm_IV, AAD, sizeof(pkthdr_t), current_tag,
+                   kMaxTagLen);
   // Reset constantness
-  memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag, kMaxTagLen);
+  memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag,
+         kMaxTagLen);
   // Compare the received tag to the current tag to authenticate app data
   assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
 #else

@@ -691,8 +691,8 @@ class Rpc {
     size_t length = std::min(TTr::kMaxDataPerPkt, hdr->msg_size - offset);
     aesni_gcm128_enc(
         &(sslot->session->gdata), &item.msg_buffer->encrypted_buf[offset],
-        &item.msg_buffer->buf[offset], length, sslot->session->gcm_IV,
-        AAD, sizeof(pkthdr_t), hdr->authentication_tag, kMaxTagLen);
+        &item.msg_buffer->buf[offset], length, sslot->session->gcm_IV, AAD,
+        sizeof(pkthdr_t), hdr->authentication_tag, kMaxTagLen);
 #endif
     if (kCcRTT) item.tx_ts = tx_ts;
 
