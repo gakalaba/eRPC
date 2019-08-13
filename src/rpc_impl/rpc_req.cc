@@ -153,7 +153,7 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
                    sslot->session->gcm_IV, AAD, sizeof(pkthdr_t), current_tag,
                    kMaxTagLen);
   // Compare tags to authenticate application data
-  assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
+  //assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
 #endif
 
   if (likely(!req_func.is_background())) {
@@ -245,6 +245,10 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
     bury_resp_msgbuf_server_st(sslot);
 
     req_msgbuf = alloc_msg_buffer(pkthdr->msg_size);
+    assert(req_msgbuf.buf != nullptr);
+#ifdef SECURE
+    assert(req_msgbuf.encrypted_buf != nullptr);
+#endif
     memcpy(req_msgbuf.get_pkthdr_0(), pkthdr, sizeof(pkthdr_t));
 
     // Update sslot tracking
@@ -276,7 +280,7 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   // Reset constantness
   memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag, kMaxTagLen);
   // Compare the received tag to the current tag to authenticate app data
-  assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
+  //assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
 #else
   // Header 0 was copied earlier. Request packet's index = packet number.
   copy_data_to_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);
