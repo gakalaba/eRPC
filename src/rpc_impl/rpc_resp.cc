@@ -102,6 +102,25 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     // Copy eRPC header (but not Transport headroom).
     memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
            sizeof(pkthdr_t) - kHeadroom);
+    // Upon receiving the 0th packet, first save the MAC/TAG. Then
+    // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
+    // the encrypted packet into the public buf
+    uint8_t received_tag[kMaxTagLen];
+    memcpy(received_tag, pkthdr->authentication_tag, kMaxTagLen);
+    // Temporarily cast away constantness of pkthdr to reset MAC field
+    memset(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, 0, kMaxTagLen);
+    uint8_t current_tag[kMaxTagLen];
+    uint8_t *AAD = reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
+    aesni_gcm128_dec(&(sslot->session->gdata), resp_msgbuf->buf,
+                     reinterpret_cast<const uint8_t *>(pkthdr + 1),
+                     pkthdr->msg_size, sslot->session->gcm_IV, AAD,
+                     sizeof(pkthdr_t), current_tag, kMaxTagLen);
+    // Reset constantness
+    memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag,
+           kMaxTagLen);
+    // Compare the received tag to the current tag to authenticate app data
+    assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
+  
 #else
     // Copy eRPC header and data (but not Transport headroom). The eRPC header
     // will be needed (e.g., to determine the request type) if the continuation
@@ -186,8 +205,10 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
                     args.resp_msgbuf, args.cont_func, args.tag, args.cont_etid);
     session->client_info.enq_req_backlog.pop();
   }
+/*
 #ifdef SECURE
   if (likely(pkthdr->msg_size <= TTr::kMaxDataPerPkt)) {
+  ERPC_TRACE("back in second portion of small handling for RESPONSE");
     // Upon receiving the 0th packet, first save the MAC/TAG. Then
     // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
     // the encrypted packet into the public buf
@@ -197,9 +218,10 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     memset(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, 0, kMaxTagLen);
     uint8_t current_tag[kMaxTagLen];
     uint8_t *AAD = reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
-    aesni_gcm128_dec(&(sslot->session->gdata), resp_msgbuf->buf,
+    ERPC_TRACE("msg_size = %zu", pkthdr->msg_size);
+    aesni_gcm128_dec(&(session->gdata), resp_msgbuf->buf,
                      reinterpret_cast<const uint8_t *>(pkthdr + 1),
-                     pkthdr->msg_size, sslot->session->gcm_IV, AAD,
+                     pkthdr->msg_size, session->gcm_IV, AAD,
                      sizeof(pkthdr_t), current_tag, kMaxTagLen);
     // Reset constantness
     memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag,
@@ -208,6 +230,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
   }
 #endif
+*/
   if (likely(_cont_etid == kInvalidBgETid)) {
     _cont_func(context, _tag);
   } else {
