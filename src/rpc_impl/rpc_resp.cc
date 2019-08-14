@@ -95,14 +95,14 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
 
   // Special handling for single-packet responses
   if (likely(pkthdr->msg_size <= TTr::kMaxDataPerPkt)) {
-    ERPC_TRACE("in small handling for RESPONSE");
+    ERPC_INFO("WE CAME in small handling for RESPONSE--->");
     resize_msg_buffer(resp_msgbuf, pkthdr->msg_size);
 
 #ifdef SECURE
     // Copy eRPC header (but not Transport headroom).
     memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
            sizeof(pkthdr_t) - kHeadroom);
-    // Upon receiving the 0th packet, first save the MAC/TAG. Then
+    /*// Upon receiving the 0th packet, first save the MAC/TAG. Then
     // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
     // the encrypted packet into the public buf
     uint8_t received_tag[kMaxTagLen];
@@ -111,6 +111,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     memset(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, 0, kMaxTagLen);
     uint8_t current_tag[kMaxTagLen];
     uint8_t *AAD = reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
+    ERPC_INFO("msg_size = %zu\n", pkthdr->msg_size);
     aesni_gcm128_dec(&(sslot->session->gdata), resp_msgbuf->buf,
                      reinterpret_cast<const uint8_t *>(pkthdr + 1),
                      pkthdr->msg_size, sslot->session->gcm_IV, AAD,
@@ -120,7 +121,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
            kMaxTagLen);
     // Compare the received tag to the current tag to authenticate app data
     assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
-  
+  */
 #else
     // Copy eRPC header and data (but not Transport headroom). The eRPC header
     // will be needed (e.g., to determine the request type) if the continuation
@@ -130,7 +131,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
 #endif
     // Fall through to invoke continuation
   } else {
-    ERPC_TRACE("in large handling for RESPONSE");
+    ERPC_INFO("in large handling for RESPONSE");
     // This is an in-order response packet. So, we still have the request.
     MsgBuffer *req_msgbuf = sslot->tx_msgbuf;
 
@@ -205,10 +206,10 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
                     args.resp_msgbuf, args.cont_func, args.tag, args.cont_etid);
     session->client_info.enq_req_backlog.pop();
   }
-/*
+
 #ifdef SECURE
   if (likely(pkthdr->msg_size <= TTr::kMaxDataPerPkt)) {
-  ERPC_TRACE("back in second portion of small handling for RESPONSE");
+  ERPC_INFO("BACK IN second portion of small handling for RESPONSE--->");
     // Upon receiving the 0th packet, first save the MAC/TAG. Then
     // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
     // the encrypted packet into the public buf
@@ -218,7 +219,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     memset(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, 0, kMaxTagLen);
     uint8_t current_tag[kMaxTagLen];
     uint8_t *AAD = reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
-    ERPC_TRACE("msg_size = %zu", pkthdr->msg_size);
+    ERPC_INFO("msg_size = %zu\n", pkthdr->msg_size);
     aesni_gcm128_dec(&(session->gdata), resp_msgbuf->buf,
                      reinterpret_cast<const uint8_t *>(pkthdr + 1),
                      pkthdr->msg_size, session->gcm_IV, AAD,
@@ -230,7 +231,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
   }
 #endif
-*/
+
   if (likely(_cont_etid == kInvalidBgETid)) {
     _cont_func(context, _tag);
   } else {

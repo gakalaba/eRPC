@@ -689,7 +689,7 @@ class Rpc {
     uint8_t *AAD = reinterpret_cast<uint8_t *>(hdr);
     size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
     size_t length = std::min(TTr::kMaxDataPerPkt, hdr->msg_size - offset);
-    ERPC_TRACE("ENQUEUE_BURST: offset = %zu, length = %zu", offset, length);
+    ERPC_INFO("ENQUEUE_BURST: offset = %zu, length = %zu, kMax = %zu\n", offset, length,TTr::kMaxDataPerPkt);
     aesni_gcm128_enc(
         &(sslot->session->gdata), &item.msg_buffer->encrypted_buf[offset],
         &item.msg_buffer->buf[offset], length, sslot->session->gcm_IV, AAD,
