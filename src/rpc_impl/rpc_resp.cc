@@ -101,6 +101,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     // Copy eRPC header (but not Transport headroom).
     memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
            sizeof(pkthdr_t) - kHeadroom);
+
     // Upon receiving the 0th packet, first save the MAC/TAG. Then
     // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
     // the encrypted packet into the public buf
@@ -202,7 +203,6 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
                     args.resp_msgbuf, args.cont_func, args.tag, args.cont_etid);
     session->client_info.enq_req_backlog.pop();
   }
-
   if (likely(_cont_etid == kInvalidBgETid)) {
     _cont_func(context, _tag);
   } else {
