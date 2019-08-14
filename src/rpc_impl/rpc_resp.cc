@@ -95,6 +95,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
 
   // Special handling for single-packet responses
   if (likely(pkthdr->msg_size <= TTr::kMaxDataPerPkt)) {
+    ERPC_TRACE("in small handling for RESPONSE");
     resize_msg_buffer(resp_msgbuf, pkthdr->msg_size);
 
 #ifdef SECURE
@@ -129,6 +130,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
 #endif
     // Fall through to invoke continuation
   } else {
+    ERPC_TRACE("in large handling for RESPONSE");
     // This is an in-order response packet. So, we still have the request.
     MsgBuffer *req_msgbuf = sslot->tx_msgbuf;
 
