@@ -95,7 +95,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
 
   // Special handling for single-packet responses
   if (likely(pkthdr->msg_size <= TTr::kMaxDataPerPkt)) {
-    ERPC_INFO("WE CAME in small handling for RESPONSE--->");
+    //ANJA ERPC_INFO("WE CAME in small handling for RESPONSE--->");
     resize_msg_buffer(resp_msgbuf, pkthdr->msg_size);
 
 #ifdef SECURE
@@ -209,7 +209,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
 
 #ifdef SECURE
   if (likely(pkthdr->msg_size <= TTr::kMaxDataPerPkt)) {
-  ERPC_INFO("BACK IN second portion of small handling for RESPONSE--->");
+  //ANJA ERPC_INFO("BACK IN second portion of small handling for RESPONSE--->");
     // Upon receiving the 0th packet, first save the MAC/TAG. Then
     // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
     // the encrypted packet into the public buf
@@ -219,7 +219,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     memset(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, 0, kMaxTagLen);
     uint8_t current_tag[kMaxTagLen];
     uint8_t *AAD = reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
-    ERPC_INFO("msg_size = %zu\n", pkthdr->msg_size);
+    //ANJA ERPC_INFO("msg_size = %zu\n", pkthdr->msg_size);
     aesni_gcm128_dec(&(session->gdata), resp_msgbuf->buf,
                      reinterpret_cast<const uint8_t *>(pkthdr + 1),
                      pkthdr->msg_size, session->gcm_IV, AAD,
