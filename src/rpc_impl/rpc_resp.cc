@@ -95,7 +95,6 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
 
   // Special handling for single-packet responses
   if (likely(pkthdr->msg_size <= TTr::kMaxDataPerPkt)) {
-    //ANJA ERPC_INFO("WE CAME in small handling for RESPONSE--->");
     resize_msg_buffer(resp_msgbuf, pkthdr->msg_size);
 
 #ifdef SECURE
@@ -111,7 +110,6 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     memset(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, 0, kMaxTagLen);
     uint8_t current_tag[kMaxTagLen];
     uint8_t *AAD = reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
-    ERPC_INFO("msg_size = %zu\n", pkthdr->msg_size);
     aesni_gcm128_dec(&(sslot->session->gdata), resp_msgbuf->buf,
                      reinterpret_cast<const uint8_t *>(pkthdr + 1),
                      pkthdr->msg_size, sslot->session->gcm_IV, AAD,
@@ -130,7 +128,6 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
 #endif
     // Fall through to invoke continuation
   } else {
-    ERPC_INFO("in large handling for RESPONSE");
     // This is an in-order response packet. So, we still have the request.
     MsgBuffer *req_msgbuf = sslot->tx_msgbuf;
 
