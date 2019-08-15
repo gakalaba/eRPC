@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "transport_impl/eth_common.h"
+
 namespace erpc {
 
 // Explanation of the headroom hack:
@@ -63,7 +64,7 @@ struct pkthdr_t {
   uint64_t req_num : kReqNumBits;
   uint64_t magic : kPktHdrMagicBits;  ///< Magic from alloc_msg_buffer()
 #ifdef SECURE
-  uint8_t authentication_tag[kMaxTagLen]; ///< Tag used for GCM authentication
+  uint8_t authentication_tag[kMaxTagLen];  ///< Tag used for GCM authentication
 #endif
   /// Fill in packet header fields
   void format(uint64_t _req_type, uint64_t _msg_size,

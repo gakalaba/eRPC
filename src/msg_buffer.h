@@ -33,18 +33,19 @@ class MsgBuffer {
  private:
   /// Return a pointer to the pre-appended packet header of this MsgBuffer
   inline pkthdr_t *get_pkthdr_0() const {
-#ifdef SECURE 
+#ifdef SECURE
     return reinterpret_cast<pkthdr_t *>(encrypted_buf - sizeof(pkthdr_t));
 #else
     return reinterpret_cast<pkthdr_t *>(buf - sizeof(pkthdr_t));
-#endif  
+#endif
   }
 
   /// Return a pointer to the nth packet header of this MsgBuffer.
   /// get_pkthdr_0() is more efficient for retrieving the zeroth header.
   inline pkthdr_t *get_pkthdr_n(size_t n) const {
 #ifdef SECURE
-    return reinterpret_cast<pkthdr_t *>(encrypted_buf - (n + 1) * sizeof(pkthdr_t));
+    return reinterpret_cast<pkthdr_t *>(encrypted_buf -
+                                        (n + 1) * sizeof(pkthdr_t));
 #else
     return reinterpret_cast<pkthdr_t *>(buf - (n + 1) * sizeof(pkthdr_t));
 #endif
@@ -53,10 +54,11 @@ class MsgBuffer {
   /// Return a pointer to the first packet header of this MsgBuffer
   inline pkthdr_t *get_last_pkthdr() const {
 #ifdef SECURE
-    return reinterpret_cast<pkthdr_t *>(encrypted_buf - num_pkts * sizeof(pkthdr_t));
+    return reinterpret_cast<pkthdr_t *>(encrypted_buf -
+                                        num_pkts * sizeof(pkthdr_t));
 #else
     return reinterpret_cast<pkthdr_t *>(buf - num_pkts * sizeof(pkthdr_t));
-#endif 
+#endif
   }
 
   ///@{ Accessors for the packet header
@@ -105,9 +107,9 @@ class MsgBuffer {
     return ret.str();
   }
 
-  /// Construct a MsgBuffer with a dynamic Buffer allocated by eRPC.
-  /// The zeroth packet header is stored at \p buffer.buf. \p buffer must have
-  /// space for at least \p max_data_bytes, and \p max_num_pkts packet headers.
+/// Construct a MsgBuffer with a dynamic Buffer allocated by eRPC.
+/// The zeroth packet header is stored at \p buffer.buf. \p buffer must have
+/// space for at least \p max_data_bytes, and \p max_num_pkts packet headers.
 #ifdef SECURE
   MsgBuffer(Buffer buffer, Buffer encrypted_buffer, size_t max_data_size,
             size_t max_num_pkts)
@@ -126,7 +128,7 @@ class MsgBuffer {
         encrypted_buf(encrypted_buffer.buf + max_num_pkts * sizeof(pkthdr_t)),
 #endif
         buf(buffer.buf + max_num_pkts * sizeof(pkthdr_t)) {
-    assert(buffer.buf != nullptr);    // buffer must be valid
+    assert(buffer.buf != nullptr);  // buffer must be valid
 #ifdef SECURE
     assert(encrypted_buffer.buf != nullptr);  // crypto buffer must be valid
 #endif
@@ -202,7 +204,7 @@ class MsgBuffer {
   size_t num_pkts;       ///< Current number of packets in this MsgBuffer
 
 #ifdef SECURE
-  /// Pointer to the first encrypted application data byte.
+  /// Pointer to the first encrypted application data byte
   uint8_t *encrypted_buf;
 #endif
 

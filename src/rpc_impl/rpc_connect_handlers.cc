@@ -18,8 +18,9 @@ void Rpc<TTr>::handle_connect_req_st(const SmPkt &sm_pkt) {
   sprintf(issue_msg, "Rpc %u: Received connect request from %s. Issue", rpc_id,
           sm_pkt.client.name().c_str());
 
-  // Handle duplicate session connect requests
+  // Handle reordering
   if (conn_req_token_map.count(sm_pkt.uniq_token) > 0) {
+    // We've received this connect request before
     uint16_t srv_session_num = conn_req_token_map[sm_pkt.uniq_token];
     assert(session_vec.size() > srv_session_num);
 
@@ -78,10 +79,10 @@ void Rpc<TTr>::handle_connect_req_st(const SmPkt &sm_pkt) {
   auto *session = new Session(Session::Role::kServer, sm_pkt.uniq_token,
                               get_freq_ghz(), transport->get_bandwidth());
 #ifdef SECURE
-    if (session != nullptr) {
-      // Initialize the key used at this end
-      aesni_gcm128_pre(session->gcm_key, &(session->gdata));
-    }
+  if (session != nullptr) {
+    // Initialize the key used at this end
+    aesni_gcm128_pre(session->gcm_key, &(session->gdata));
+  }
 #endif
   session->state = SessionState::kConnected;
 

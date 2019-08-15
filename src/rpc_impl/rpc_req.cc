@@ -152,7 +152,9 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
                    req_msgbuf.encrypted_buf, pkthdr->msg_size,
                    sslot->session->gcm_IV, AAD, sizeof(pkthdr_t), current_tag,
                    kMaxTagLen);
-  // Compare tags to authenticate application data
+
+  // Compare tags to authenticate application data.
+  // TODO: Don't crash server if authentication fails.
   assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
 #endif
 
@@ -267,8 +269,10 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   // packet into the public buf
   uint8_t received_tag[kMaxTagLen];
   memcpy(received_tag, pkthdr->authentication_tag, kMaxTagLen);
+
   // Temporarily cast away constantness of pkthdr to reset MAC field
   memset(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, 0, kMaxTagLen);
+
   uint8_t current_tag[kMaxTagLen];
   uint8_t *AAD = reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
   size_t offset = pkthdr->pkt_num * TTr::kMaxDataPerPkt;
@@ -277,9 +281,11 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
                    reinterpret_cast<const uint8_t *>(pkthdr + 1), length,
                    sslot->session->gcm_IV, AAD, sizeof(pkthdr_t), current_tag,
                    kMaxTagLen);
+
   // Reset constantness
   memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag,
          kMaxTagLen);
+
   // Compare the received tag to the current tag to authenticate app data
   assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
 #else
@@ -287,7 +293,9 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   copy_data_to_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);
 #endif
 
+  // Invoke the request handler iff we have all the request packets
   if (sslot->server_info.num_rx != req_msgbuf.num_pkts) return;
+
   const ReqFunc &req_func = req_func_arr[pkthdr->req_type];
 
   // Remember request metadata for enqueue_response(). req_type was invalidated
