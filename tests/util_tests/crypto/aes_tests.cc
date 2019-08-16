@@ -156,7 +156,7 @@ TEST(AesGcmTest, CorrectnessSmall) {
   }
 }
 
-// Correctness test for encrypting 64 byte payloads
+// Correctness test for encrypting 60 byte payloads
 static constexpr size_t kTestLenBig2 = 60;
 static constexpr size_t kAADLengthBig = 20;
 TEST(AesGcmTest, CorrectnessBig) {
@@ -343,8 +343,8 @@ TEST(AesGcmTest, PerfBig) {
     perf_print(stop, start, static_cast<long long>(kTestLenBig * kTestLoops));
   }
 }
-/*
-// Correctness test for encrypting 64 byte payloads
+
+// Correctness test for piece-wise encrypting 60 byte payloads
 TEST(AesGcmTest, BlockCorrectnessBig) {
   struct gcm_data gdata_big;  // defined in aes_gcm
   // Table values for large test, including Key, Plaintext, Cyphertext, Tag
@@ -388,22 +388,14 @@ TEST(AesGcmTest, BlockCorrectnessBig) {
   // This is only required once for a given key
   aesni_gcm128_pre(key_big, &gdata_big);
   printf(
-      "AES GCM correctness parameters block by block big plain text length:%zu;
-"
+      "AES GCM correctness parameters block by block big plain text length:%zu;"
       "IV length:%d; ADD length:%zu; Key length:%d \n",
       kTestLenBig2, GCM_IV_LEN, kAADLengthBig, GCM_128_KEY_LEN);
   // Correctness for big Plaintext
   {
-    aesni_gcm128_init(&gdata_big, IV_big, AAD_big, kAADLengthBig);
-    aesni_gcm128_enc_update(&gdata_big, cyphertext_big_test,
-                                        plaintext_big_true, 16);
-    aesni_gcm128_enc_update(&gdata_big, &cyphertext_big_test[16],
-                                        &plaintext_big_true[16], 16);
-    aesni_gcm128_enc_update(&gdata_big, &cyphertext_big_test[32],
-                                        &plaintext_big_true[32], 16);
-    aesni_gcm128_enc_update(&gdata_big, &cyphertext_big_test[48],
-                                       &plaintext_big_true[48], 16);
-    aesni_gcm128_enc_finalize(&gdata_big, auth_tag_big_test, MAX_TAG_LEN);
+    aesni_gcm128_enc(&gdata_big, cyphertext_big_test, plaintext_big_true,
+                     kTestLenBig2, IV_big, AAD_big, kAADLengthBig,
+                     auth_tag_big_test, MAX_TAG_LEN);
     check_data(cyphertext_big_test, cyphertext_big_true, kTestLenBig2, 0,
                "ISA-L Encrypt big plaintext check of Cyphertext (C)");
     check_data(auth_tag_big_test, auth_tag_big_true, MAX_TAG_LEN, 0,
@@ -411,23 +403,25 @@ TEST(AesGcmTest, BlockCorrectnessBig) {
   }
 
   {
-    aesni_gcm128_init(&gdata_big, IV_big, AAD_big, kAADLengthBig);
-    aesni_gcm128_dec_update(&gdata_big, plaintext_big_test,
-                                        cyphertext_big_true, 16);
-    aesni_gcm128_dec_update(&gdata_big, &plaintext_big_test[16],
-                                        &cyphertext_big_true[16], 16);
-    aesni_gcm128_dec_update(&gdata_big, &plaintext_big_test[32],
-                                        &cyphertext_big_true[32], 16);
-    aesni_gcm128_dec_update(&gdata_big, &plaintext_big_test[48],
-                                       &cyphertext_big_true[48], 16);
-    aesni_gcm128_dec_finalize(&gdata_big, auth_tag_big_test, MAX_TAG_LEN);
+    aesni_gcm128_dec(&gdata_big, &plaintext_big_test[0],
+                                 &cyphertext_big_true[0],
+                                 kTestLenBig2, IV_big, AAD_big, kAADLengthBig,
+                                 auth_tag_big_test, MAX_TAG_LEN);
+    aesni_gcm128_dec(&gdata_big, &plaintext_big_test[20],
+                                 &cyphertext_big_true[20],
+                                 20, IV_big, AAD_big, kAADLengthBig,
+                                 auth_tag_big_test, MAX_TAG_LEN);
+    aesni_gcm128_dec(&gdata_big, &plaintext_big_test[40],
+                                 &cyphertext_big_true[40],
+                                 20, IV_big, AAD_big, kAADLengthBig,
+                                 auth_tag_big_test, MAX_TAG_LEN);
     check_data(plaintext_big_test, plaintext_big_true, kTestLenBig2, 0,
                "ISA-L Decrypt big plaintext check of Plaintext (P)");
     check_data(auth_tag_big_test, auth_tag_big_true, MAX_TAG_LEN, 0,
                "ISA-L Decrypt big plaintext check of Authentication Tag (T)");
   }
 }
-*/
+
 
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
