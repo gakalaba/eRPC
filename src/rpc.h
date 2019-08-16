@@ -702,7 +702,7 @@ class Rpc {
         &item.msg_buffer->buf[offset], length, sslot->session->gcm_IV, AAD,
         sizeof(pkthdr_t), hdr->authentication_tag, kMaxTagLen);
     */
-    nano_sleep(914);
+    nano_sleep(914, measure_rdtsc_freq());
 #endif
     if (kCcRTT) item.tx_ts = tx_ts;
 
