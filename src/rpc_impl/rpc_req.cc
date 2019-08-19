@@ -143,7 +143,7 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
   // Upon receiving the entire message, first save the MAC/TAG. Then
   // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
   // the encrypted msgbuf into the public buf
-  uint8_t received_tag[kMaxTagLen];
+  /*uint8_t received_tag[kMaxTagLen];
   memcpy(received_tag, pkthdr->authentication_tag, kMaxTagLen);
   memset(pkthdr->authentication_tag, 0, kMaxTagLen);
   uint8_t current_tag[kMaxTagLen];
@@ -156,6 +156,8 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
   // Compare tags to authenticate application data.
   // TODO: Don't crash server if authentication fails.
   assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
+  */
+  nano_sleep(80, 2.09754);
 #endif
 
   if (likely(!req_func.is_background())) {
@@ -267,7 +269,7 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   // Per packet, first save the MAC/TAG. Then zero out the MAC/TAG
   // field in the given pkthdr, and finally decrypt the encrypted
   // packet into the public buf
-  uint8_t received_tag[kMaxTagLen];
+  /*uint8_t received_tag[kMaxTagLen];
   memcpy(received_tag, pkthdr->authentication_tag, kMaxTagLen);
 
   // Temporarily cast away constantness of pkthdr to reset MAC field
@@ -288,6 +290,8 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
 
   // Compare the received tag to the current tag to authenticate app data
   assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
+  */
+  nano_sleep(80,2.09754);
 #else
   // Header 0 was copied earlier. Request packet's index = packet number.
   copy_data_to_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);

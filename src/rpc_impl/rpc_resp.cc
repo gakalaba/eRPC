@@ -101,7 +101,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
 
 #ifdef SECURE
     // Copy eRPC header (but not Transport headroom).
-    memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
+    /*memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
            sizeof(pkthdr_t) - kHeadroom);
 
     // Upon receiving the 0th packet, first save the MAC/TAG. Then
@@ -122,6 +122,8 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
            kMaxTagLen);
     // Compare the received tag to the current tag to authenticate app data
     assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
+    */
+    nano_sleep(80,2.09754);
 #else
     // Copy eRPC header and data (but not Transport headroom). The eRPC header
     // will be needed (e.g., to determine the request type) if the continuation
@@ -150,7 +152,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     // Per packet, first save the MAC/TAG. Then zero out the MAC/TAG
     // field in the given pkthdr, and finally decrypt the encrypted
     // pkt into the public buf
-    uint8_t received_tag[kMaxTagLen];
+    /*uint8_t received_tag[kMaxTagLen];
     memcpy(received_tag, pkthdr->authentication_tag, kMaxTagLen);
     // Temporarily cast away constantness of pkthdr to reset MAC field
     memset(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, 0, kMaxTagLen);
@@ -167,6 +169,9 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
            kMaxTagLen);
     // Compare the received tag to the current tag to authenticate app data
     assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
+    */
+    _unused(pkt_idx);
+    nano_sleep(80,2.09754);
 #else
     // Header 0 was copied earlier. Request packet's index = packet number.
     copy_data_to_msgbuf(resp_msgbuf, pkt_idx, pkthdr);
