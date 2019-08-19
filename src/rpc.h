@@ -692,17 +692,34 @@ class Rpc {
     item.pkt_idx = pkt_idx;
     pkthdr_t *hdr = tx_msgbuf->get_pkthdr_n(pkt_idx);
 #ifdef SECURE
-    /*
+    /*size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
+    size_t length = std::min(TTr::kMaxDataPerPkt, hdr->msg_size - offset);
+    size_t start = rdtsc();
+    memcpy(&item.msg_buffer->encrypted_buf[offset],
+           &item.msg_buffer->buf[offset], length);
+    size_t end = rdtsc();
+    ERPC_INFO("MEMCPY ************* %zu\n", (end-start));
+    start = rdtsc();
     memset(hdr->authentication_tag, 0, kMaxTagLen);
     uint8_t *AAD = reinterpret_cast<uint8_t *>(hdr);
-    size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
-    size_t length = std::min(TTr::kMaxDataPerPkt, hdr->msg_size - offset);
+    //size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
+    //size_t length = std::min(TTr::kMaxDataPerPkt, hdr->msg_size - offset);
     aesni_gcm128_enc(
         &(sslot->session->gdata), &item.msg_buffer->encrypted_buf[offset],
         &item.msg_buffer->buf[offset], length, sslot->session->gcm_IV, AAD,
         sizeof(pkthdr_t), hdr->authentication_tag, kMaxTagLen);
+    end = rdtsc();
+    ERPC_INFO("       ENCRYPT ************* %zu\n", (end-start));
+    ERPC_INFO("               length ************* %zu\n", (length));
     */
-    nano_sleep(914, measure_rdtsc_freq());
+    size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
+    size_t length = std::min(TTr::kMaxDataPerPkt, hdr->msg_size - offset);
+    size_t start = rdtsc();
+    memcpy(&item.msg_buffer->encrypted_buf[offset],
+           &item.msg_buffer->buf[offset], length);
+    size_t end = rdtsc();
+    ERPC_INFO("************* %zu\n", (end-start));
+    nano_sleep(2000, 2.09754);
 #endif
     if (kCcRTT) item.tx_ts = tx_ts;
 
