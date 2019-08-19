@@ -712,13 +712,6 @@ class Rpc {
     ERPC_INFO("       ENCRYPT ************* %zu\n", (end-start));
     ERPC_INFO("               length ************* %zu\n", (length));
     */
-    size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
-    size_t length = std::min(TTr::kMaxDataPerPkt, hdr->msg_size - offset);
-    size_t start = rdtsc();
-    memcpy(&item.msg_buffer->encrypted_buf[offset],
-           &item.msg_buffer->buf[offset], length);
-    size_t end = rdtsc();
-    ERPC_INFO("************* %zu\n", (end-start));
     nano_sleep(2000, 2.09754);
 #endif
     if (kCcRTT) item.tx_ts = tx_ts;
