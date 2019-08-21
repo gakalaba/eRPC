@@ -692,6 +692,7 @@ class Rpc {
     item.pkt_idx = pkt_idx;
     pkthdr_t *hdr = tx_msgbuf->get_pkthdr_n(pkt_idx);
 #ifdef SECURE
+    /*
     memset(hdr->authentication_tag, 0, kMaxTagLen);
     uint8_t *AAD = reinterpret_cast<uint8_t *>(hdr);
     size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
@@ -699,8 +700,8 @@ class Rpc {
     aesni_gcm128_enc(
         &(sslot->session->gdata), &item.msg_buffer->encrypted_buf[offset],
         &item.msg_buffer->buf[offset], length, sslot->session->gcm_IV, AAD,
-        sizeof(pkthdr_t), hdr->authentication_tag, kMaxTagLen);
-    //nano_sleep(80, 2.09754);
+        sizeof(pkthdr_t), hdr->authentication_tag, kMaxTagLen);*/
+    nano_sleep(700,2.09754);
 #endif
     if (kCcRTT) item.tx_ts = tx_ts;
 

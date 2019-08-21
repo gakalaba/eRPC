@@ -157,7 +157,7 @@ void Rpc<TTr>::process_small_req_st(SSlot *sslot, pkthdr_t *pkthdr) {
   // TODO: Don't crash server if authentication fails.
   assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
   */
-  nano_sleep(80, 2.09754);
+  nano_sleep(700,2.09754);
 #endif
 
   if (likely(!req_func.is_background())) {
@@ -291,7 +291,7 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   // Compare the received tag to the current tag to authenticate app data
   assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
   */
-  nano_sleep(80,2.09754);
+  nano_sleep(700,2.09754);
 #else
   // Header 0 was copied earlier. Request packet's index = packet number.
   copy_data_to_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);
