@@ -701,7 +701,7 @@ class Rpc {
         &(sslot->session->gdata), &item.msg_buffer->encrypted_buf[offset],
         &item.msg_buffer->buf[offset], length, sslot->session->gcm_IV, AAD,
         sizeof(pkthdr_t), hdr->authentication_tag, kMaxTagLen);*/
-    nano_sleep(0,2.09754);
+    nano_sleep(900,2.09754);
 #endif
     if (kCcRTT) item.tx_ts = tx_ts;
 
