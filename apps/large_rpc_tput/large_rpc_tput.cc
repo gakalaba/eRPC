@@ -21,7 +21,7 @@
 #include "util/autorun_helpers.h"
 
 static constexpr size_t kAppEvLoopMs = 1000;  // Duration of event loop
-static constexpr bool kAppVerbose = false;
+static constexpr bool kAppVerbose = true;
 
 // Experiment control flags
 static constexpr bool kAppClientMemsetReq = false;   // Fill entire request
@@ -69,7 +69,7 @@ void req_handler(erpc::ReqHandle *req_handle, void *_context) {
 
   c->stat_rx_bytes_tot += FLAGS_req_size;
   c->stat_tx_bytes_tot += FLAGS_resp_size;
-
+  printf("in req_handler, tx_bytes_tot = %zu\n", c->stat_tx_bytes_tot);
   c->rpc->enqueue_response(req_handle, &resp_msgbuf);
 }
 
