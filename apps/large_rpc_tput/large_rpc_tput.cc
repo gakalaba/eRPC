@@ -69,7 +69,6 @@ void req_handler(erpc::ReqHandle *req_handle, void *_context) {
 
   c->stat_rx_bytes_tot += FLAGS_req_size;
   c->stat_tx_bytes_tot += FLAGS_resp_size;
-  printf("in req_handler, tx_bytes_tot = %zu\n", c->stat_tx_bytes_tot);
   c->rpc->enqueue_response(req_handle, &resp_msgbuf);
 }
 
