@@ -291,6 +291,7 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   // Compare the received tag to the current tag to authenticate app data
   assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
   */
+  copy_data_to_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);
   nano_sleep(0,2.09754);
 #else
   // Header 0 was copied earlier. Request packet's index = packet number.
