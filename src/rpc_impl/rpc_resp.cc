@@ -123,7 +123,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     // Compare the received tag to the current tag to authenticate app data
     assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
     */
-    //nano_sleep(0,2.09754);
+    nano_sleep(500,2.09754);
 #else
     // Copy eRPC header and data (but not Transport headroom). The eRPC header
     // will be needed (e.g., to determine the request type) if the continuation
@@ -171,7 +171,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
     */
     _unused(pkt_idx);
-    //nano_sleep(0,2.09754);
+    nano_sleep(500,2.09754);
 #else
     // Header 0 was copied earlier. Request packet's index = packet number.
     copy_data_to_msgbuf(resp_msgbuf, pkt_idx, pkthdr);
