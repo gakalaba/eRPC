@@ -21,7 +21,7 @@
 #include "util/autorun_helpers.h"
 
 static constexpr size_t kAppEvLoopMs = 1000;  // Duration of event loop
-static constexpr bool kAppVerbose = true;
+static constexpr bool kAppVerbose = false;
 
 // Experiment control flags
 static constexpr bool kAppClientMemsetReq = false;   // Fill entire request
