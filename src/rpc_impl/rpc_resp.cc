@@ -101,10 +101,10 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
 
 #ifdef SECURE
     // Copy eRPC header (but not Transport headroom).
-    /*memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
+    memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
            sizeof(pkthdr_t) - kHeadroom);
 
-    // Upon receiving the 0th packet, first save the MAC/TAG. Then
+    /*// Upon receiving the 0th packet, first save the MAC/TAG. Then
     // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
     // the encrypted packet into the public buf
     uint8_t received_tag[kMaxTagLen];
