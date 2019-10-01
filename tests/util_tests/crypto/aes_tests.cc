@@ -318,35 +318,35 @@ TEST(AesGcmTest, PerfBig) {
   // Performance for big plaintext
   {
     struct perf start, stop;
-    for (size_t j = 32; j < 33; j*=2) {
-	plaintext_big = reinterpret_cast<unsigned char *>(malloc(j));
-	mk_rand_data(plaintext_big, j);
-        cyphertext_big = reinterpret_cast<unsigned char *>(malloc(j));	
-    	perf_start(&start);
-    	for (size_t i = 0; i < kTestLoops; i++) {
-      		aesni_gcm128_enc(&gdata, cyphertext_big, plaintext_big, j, IV,
-                       AAD, kAADLength, auth_tag_big, MAX_TAG_LEN);
-    	}
-    	perf_stop(&stop);
-    	printf("aes_gcm_enc with data size = %zd: ", j);
-    	perf_print(stop, start, static_cast<long long>(j * kTestLoops));
+    for (size_t j = 32; j < 33; j *= 2) {
+      plaintext_big = reinterpret_cast<unsigned char *>(malloc(j));
+      mk_rand_data(plaintext_big, j);
+      cyphertext_big = reinterpret_cast<unsigned char *>(malloc(j));
+      perf_start(&start);
+      for (size_t i = 0; i < kTestLoops; i++) {
+        aesni_gcm128_enc(&gdata, cyphertext_big, plaintext_big, j, IV, AAD,
+                         kAADLength, auth_tag_big, MAX_TAG_LEN);
+      }
+      perf_stop(&stop);
+      printf("aes_gcm_enc with data size = %zd: ", j);
+      perf_print(stop, start, static_cast<long long>(j * kTestLoops));
     }
   }
 
   {
     struct perf start, stop;
-    for (size_t j = 32; j < kTestLenBig; j*=2) {
-        plaintext_big = reinterpret_cast<unsigned char *>(malloc(j));
-	mk_rand_data(plaintext_big, j);
-	cyphertext_big = reinterpret_cast<unsigned char *>(malloc(j));
-	perf_start(&start);
-        for (size_t i = 0; i < kTestLoops; i++) {
-                aesni_gcm128_dec(&gdata, plaintext_big, cyphertext_big, j, IV,
-                       AAD, kAADLength, auth_tag_big, MAX_TAG_LEN);
-        }
-        perf_stop(&stop);
-        printf("aes_gcm_dec with data size = %zd: ", j);
-        perf_print(stop, start, static_cast<long long>(j * kTestLoops));
+    for (size_t j = 32; j < kTestLenBig; j *= 2) {
+      plaintext_big = reinterpret_cast<unsigned char *>(malloc(j));
+      mk_rand_data(plaintext_big, j);
+      cyphertext_big = reinterpret_cast<unsigned char *>(malloc(j));
+      perf_start(&start);
+      for (size_t i = 0; i < kTestLoops; i++) {
+        aesni_gcm128_dec(&gdata, plaintext_big, cyphertext_big, j, IV, AAD,
+                         kAADLength, auth_tag_big, MAX_TAG_LEN);
+      }
+      perf_stop(&stop);
+      printf("aes_gcm_dec with data size = %zd: ", j);
+      perf_print(stop, start, static_cast<long long>(j * kTestLoops));
     }
   }
 }
