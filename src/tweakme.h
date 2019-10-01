@@ -12,6 +12,9 @@ namespace erpc {
 /// Packet loss timeout for an RPC request in microseconds
 static constexpr size_t kRpcRTOUs = 5000;
 
+// Encryption Scheme
+static constexpr size_t kPerPktEncryption = false;
+
 // Congestion control
 static constexpr bool kEnableCc = true;
 static constexpr bool kEnableCcOpts = true;

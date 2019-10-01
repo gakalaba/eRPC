@@ -684,11 +684,24 @@ class Rpc {
     item.routing_info = sslot->session->remote_routing_info;
     item.msg_buffer = const_cast<MsgBuffer *>(tx_msgbuf);
     item.pkt_idx = pkt_idx;
+    pkthdr_t *hdr = tx_msgbuf->get_pkthdr_n(pkt_idx);
+#ifdef SECURE
+    if (kPerPktEncryption) {
+      memset(hdr->authentication_tag, 0, kMaxTagLen);
+      uint8_t *AAD = reinterpret_cast<uint8_t *>(hdr);
+      size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
+      size_t length = std::min(TTr::kMaxDataPerPkt, hdr->msg_size - offset);
+      aesni_gcm128_enc(
+          &(sslot->session->gdata), &item.msg_buffer->encrypted_buf[offset],
+          &item.msg_buffer->buf[offset], length, sslot->session->gcm_IV, AAD,
+          sizeof(pkthdr_t), hdr->authentication_tag, kMaxTagLen);
+    }
+#endif
     if (kCcRTT) item.tx_ts = tx_ts;
 
     if (kTesting) {
       item.drop = roll_pkt_drop();
-      testing.pkthdr_tx_queue.push(*tx_msgbuf->get_pkthdr_n(pkt_idx));
+      testing.pkthdr_tx_queue.push(*hdr);
     }
 
     ERPC_TRACE("Rpc %u, lsn %u (%s): TX %s. Slot %s.%s\n", rpc_id,
@@ -795,15 +808,14 @@ class Rpc {
 
   /// Copy the data from a packet to a MsgBuffer at a packet index
   inline void copy_data_to_msgbuf(MsgBuffer *msgbuf, size_t pkt_idx,
-                                            const pkthdr_t *pkthdr) {
+                                  const pkthdr_t *pkthdr) {
     size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
     size_t to_copy = std::min(TTr::kMaxDataPerPkt, pkthdr->msg_size - offset);
 #ifdef SECURE
     memcpy(&msgbuf->encrypted_buf[offset], pkthdr + 1,
-         to_copy);  // From end of pkthdr
+           to_copy);  // From end of pkthdr
 #else
-    memcpy(&msgbuf->buf[offset], pkthdr + 1,
-         to_copy);  // From end of pkthdr
+    memcpy(&msgbuf->buf[offset], pkthdr + 1, to_copy);  // From end of pkthdr
 #endif
   }
 
