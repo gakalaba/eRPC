@@ -31,7 +31,7 @@ set(COMPILE_ERPC_LIB ON)
 # Options exposed to the user
 set(TRANSPORT "dpdk" CACHE STRING "Datapath transport (infiniband/raw/dpdk)")
 option(ROCE "Use RoCE if TRANSPORT is infiniband" OFF)
-option(SECURE "Use AES encryption (experimental/transport-agnostic)" OFF)
+option(SECURE "Use encryption" OFF)
 option(PERF "Compile for performance" ON)
 set(PGO "none" CACHE STRING "Profile-guided optimization (generate/use/none)")
 set(LOG_LEVEL "warn" CACHE STRING "Logging level (none/error/warn/info/reorder/trace/cc)") 
@@ -109,11 +109,11 @@ endif(TESTING)
 
 # If encryption is enabled...
 if(SECURE)
-  message(STATUS "Encryption is enabled. This is an experimental feature and may break things.")
+  message(STATUS "Encryption is enabled. This is an experimental feature.")
   add_definitions(-DSECURE=true)
   set(LIBRARIES ${LIBRARIES} isal_crypto crypto)
 else(SECURE)
-  message(STATUS "Encryption is disabled. Compiling without AES/OpenSSL support")
+  message(STATUS "Encryption is disabled.")
 endif(SECURE)
 
 # Link-time optimization

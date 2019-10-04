@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "transport_impl/eth_common.h"
+
 namespace erpc {
 
 // Explanation of the headroom hack:
