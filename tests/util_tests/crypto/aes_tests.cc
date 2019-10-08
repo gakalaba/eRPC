@@ -289,7 +289,7 @@ TEST(AesGcmTest, PerfSmall) {
 // Perf test for encrypting 100 byte payloads
 // Interested in: millions of n_byte payloads encrypted per second
 // Note: Don't pay overhead of key setup every time
-static constexpr size_t kTestLenBig = 100;
+static constexpr size_t kTestLenBig = 4096;
 TEST(AesGcmTest, PerfBig) {
   struct gcm_data gdata;  // defined in aes_gcm
 
@@ -321,26 +321,30 @@ TEST(AesGcmTest, PerfBig) {
   // Performance for big plaintext
   {
     struct perf start, stop;
-    perf_start(&start);
-    for (size_t i = 0; i < kTestLoops; i++) {
-      aesni_gcm128_enc(&gdata, cyphertext_big, plaintext_big, kTestLenBig, IV,
-                       AAD, kAADLength, auth_tag_big, MAX_TAG_LEN);
+    for (size_t j = 1; j < 4096; j *= 2) {
+      perf_start(&start);
+      for (size_t i = 0; i < kTestLoops; i++) {
+        aesni_gcm128_enc(&gdata, cyphertext_big, plaintext_big, j, IV, AAD,
+                         kAADLength, auth_tag_big, MAX_TAG_LEN);
+      }
+      perf_stop(&stop);
+      printf("aes_gcm_enc length %zu: ", j);
+      perf_print(stop, start, static_cast<long long>(j) * kTestLoops);
     }
-    perf_stop(&stop);
-    printf("aes_gcm_enc : ");
-    perf_print(stop, start, static_cast<long long>(kTestLenBig) * kTestLoops);
   }
 
   {
     struct perf start, stop;
-    perf_start(&start);
-    for (size_t i = 0; i < kTestLoops; i++) {
-      aesni_gcm128_dec(&gdata, plaintext_big, cyphertext_big, kTestLenBig, IV,
-                       AAD, kAADLength, auth_tag_big, MAX_TAG_LEN);
+    for (size_t j = 1; j < 4096; j *= 2) {
+      perf_start(&start);
+      for (size_t i = 0; i < kTestLoops; i++) {
+        aesni_gcm128_dec(&gdata, plaintext_big, cyphertext_big, j, IV, AAD,
+                         kAADLength, auth_tag_big, MAX_TAG_LEN);
+      }
+      perf_stop(&stop);
+      printf("aes_gcm_dec length %zu: ", j);
+      perf_print(stop, start, static_cast<long long>(j * kTestLoops));
     }
-    perf_stop(&stop);
-    printf("aes_gcm_dec : ");
-    perf_print(stop, start, static_cast<long long>(kTestLenBig * kTestLoops));
   }
 }
 
@@ -404,24 +408,20 @@ TEST(AesGcmTest, BlockCorrectnessBig) {
 
   {
     aesni_gcm128_dec(&gdata_big, &plaintext_big_test[0],
-                                 &cyphertext_big_true[0],
-                                 kTestLenBig2, IV_big, AAD_big, kAADLengthBig,
-                                 auth_tag_big_test, MAX_TAG_LEN);
+                     &cyphertext_big_true[0], kTestLenBig2, IV_big, AAD_big,
+                     kAADLengthBig, auth_tag_big_test, MAX_TAG_LEN);
     aesni_gcm128_dec(&gdata_big, &plaintext_big_test[20],
-                                 &cyphertext_big_true[20],
-                                 20, IV_big, AAD_big, kAADLengthBig,
-                                 auth_tag_big_test, MAX_TAG_LEN);
+                     &cyphertext_big_true[20], 20, IV_big, AAD_big,
+                     kAADLengthBig, auth_tag_big_test, MAX_TAG_LEN);
     aesni_gcm128_dec(&gdata_big, &plaintext_big_test[40],
-                                 &cyphertext_big_true[40],
-                                 20, IV_big, AAD_big, kAADLengthBig,
-                                 auth_tag_big_test, MAX_TAG_LEN);
+                     &cyphertext_big_true[40], 20, IV_big, AAD_big,
+                     kAADLengthBig, auth_tag_big_test, MAX_TAG_LEN);
     check_data(plaintext_big_test, plaintext_big_true, kTestLenBig2, 0,
                "ISA-L Decrypt big plaintext check of Plaintext (P)");
     check_data(auth_tag_big_test, auth_tag_big_true, MAX_TAG_LEN, 0,
                "ISA-L Decrypt big plaintext check of Authentication Tag (T)");
   }
 }
-
 
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
