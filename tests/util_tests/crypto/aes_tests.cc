@@ -31,6 +31,7 @@
 #include <isa-l_crypto/aes_gcm.h>  //FROM ISA LIB
 #include <sys/time.h>
 #include <unistd.h>
+#include <time.h>
 
 // IV is the Initialization Vector. It is to be completely random. It is
 // necessary for the GCM mode of AES to function.
@@ -320,31 +321,46 @@ TEST(AesGcmTest, PerfBig) {
 
   // Performance for big plaintext
   {
+    printf("------------------ENCRYPTION TIMING PER SIZE ------------------\n");
     struct perf start, stop;
-    for (size_t j = 1; j < 4096; j *= 2) {
+    struct timespec begin, finish;
+    for (size_t j = 1; j < kTestLenBig; j *= 2) {
+      clock_gettime(CLOCK_REALTIME, &begin);
       perf_start(&start);
       for (size_t i = 0; i < kTestLoops; i++) {
         aesni_gcm128_enc(&gdata, cyphertext_big, plaintext_big, j, IV, AAD,
                          kAADLength, auth_tag_big, MAX_TAG_LEN);
       }
+      clock_gettime(CLOCK_REALTIME, &finish);
       perf_stop(&stop);
-      printf("aes_gcm_enc length %zu: ", j);
+      double ns = (finish.tv_sec - begin.tv_sec) * 1000000000.0 + (finish.tv_nsec - begin.tv_nsec);
+      printf("says it took %lf ns for %zu loops, avg = %lf\n", ns, kTestLoops, (ns / kTestLoops));
+      printf("aes_gcm_enc length %zu at %zu loops: ", j, kTestLoops);
       perf_print(stop, start, static_cast<long long>(j) * kTestLoops);
+      printf("\n");
     }
   }
 
   {
+    printf("------------------DECRYPTION TIMING PER SIZE ------------------\n");
     struct perf start, stop;
-    for (size_t j = 1; j < 4096; j *= 2) {
+    struct timespec begin, finish;
+    for (size_t j = 1; j < kTestLenBig; j *= 2) {
       perf_start(&start);
+      clock_gettime(CLOCK_REALTIME, &begin);
       for (size_t i = 0; i < kTestLoops; i++) {
         aesni_gcm128_dec(&gdata, plaintext_big, cyphertext_big, j, IV, AAD,
                          kAADLength, auth_tag_big, MAX_TAG_LEN);
       }
+      clock_gettime(CLOCK_REALTIME, &finish);
       perf_stop(&stop);
-      printf("aes_gcm_dec length %zu: ", j);
+      double ns = (finish.tv_sec - begin.tv_sec) * 1000000000.0 + (finish.tv_nsec - begin.tv_nsec);
+      printf("says it took %lf ns for %zu loops, avg = %lf\n", ns, kTestLoops, (ns / kTestLoops));
+      printf("aes_gcm_dec length %zu at %zu loops: ", j, kTestLoops);
       perf_print(stop, start, static_cast<long long>(j * kTestLoops));
+      printf("\n");
     }
+    printf("---------------------------------------------------------------\n");
   }
 }
 
