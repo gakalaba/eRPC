@@ -13,7 +13,7 @@ namespace erpc {
 static constexpr size_t kRpcRTOUs = 5000;
 
 // Encryption Scheme
-static constexpr size_t kPerPktEncryption = false;
+static constexpr size_t kPerPktEncryption = true;
 
 // Congestion control
 static constexpr bool kEnableCc = true;
