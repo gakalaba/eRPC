@@ -64,11 +64,17 @@ void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
     // the computed MAC into the field
     memset(resp_msgbuf->get_pkthdr_0()->authentication_tag, 0, kMaxTagLen);
     uint8_t *AAD = reinterpret_cast<uint8_t *>(resp_msgbuf->get_last_pkthdr());
+    /******* TIMING *******/
+    struct timespec tput;
+    clock_gettime(CLOCK_REALTIME, &tput);
     aesni_gcm128_enc(&(session->gdata), resp_msgbuf->encrypted_buf,
                      resp_msgbuf->buf, resp_msgbuf->data_size, session->gcm_IV,
                      AAD, resp_msgbuf->num_pkts * sizeof(pkthdr_t),
                      resp_msgbuf->get_pkthdr_0()->authentication_tag,
                      kMaxTagLen);
+    double ns = erpc::ns_since(tput);
+    ERPC_ERROR("     Time for encryption took %lf ns\n", ns);
+    /******* TIMING *******/
   //}
 #endif
   // Fill in the slot and reset queueing progress
@@ -126,10 +132,16 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
       uint8_t current_tag[kMaxTagLen];
       uint8_t *AAD =
           reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
+      /******* TIMING *******/
+      struct timespec tput;
+      clock_gettime(CLOCK_REALTIME, &tput);
       aesni_gcm128_dec(&(sslot->session->gdata), resp_msgbuf->buf,
                        reinterpret_cast<const uint8_t *>(pkthdr + 1),
                        pkthdr->msg_size, sslot->session->gcm_IV, AAD,
                        sizeof(pkthdr_t), current_tag, kMaxTagLen);
+      double ns = erpc::ns_since(tput);
+      ERPC_ERROR("     Time for decryption took %lf ns\n", ns);
+      /******* TIMING *******/
       // Reset constantness
       memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag,
              kMaxTagLen);
@@ -180,10 +192,16 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
           reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
       size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
       size_t length = std::min(TTr::kMaxDataPerPkt, pkthdr->msg_size - offset);
+      /******* TIMING *******/
+      struct timespec tput;
+      clock_gettime(CLOCK_REALTIME, &tput);
       aesni_gcm128_dec(&(sslot->session->gdata), &resp_msgbuf->buf[offset],
                        reinterpret_cast<const uint8_t *>(pkthdr + 1), length,
                        sslot->session->gcm_IV, AAD, sizeof(pkthdr_t),
                        current_tag, kMaxTagLen);
+      double ns = erpc::ns_since(tput);
+      ERPC_ERROR("     Time for decryption took %lf ns\n", ns);
+      /******* TIMING *******/
       // Reset constantness
       memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag,
              kMaxTagLen);
@@ -243,10 +261,16 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     memset(resp_msgbuf->get_pkthdr_0()->authentication_tag, 0, kMaxTagLen);
     uint8_t current_tag[kMaxTagLen];
     uint8_t *AAD = reinterpret_cast<uint8_t *>(resp_msgbuf->get_last_pkthdr());
+    /******* TIMING *******/
+    struct timespec tput;
+    clock_gettime(CLOCK_REALTIME, &tput);
     aesni_gcm128_dec(
         &(session->gdata), resp_msgbuf->buf, resp_msgbuf->encrypted_buf,
         resp_msgbuf->data_size, session->gcm_IV, AAD,
         resp_msgbuf->num_pkts * sizeof(pkthdr_t), current_tag, kMaxTagLen);
+    double ns = erpc::ns_since(tput);
+    ERPC_ERROR("     Time for decryption took %lf ns\n", ns);
+    /******* TIMING *******/
     // Compare the received tag to the current tag to authenticate app data
     assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
   }
