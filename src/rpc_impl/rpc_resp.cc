@@ -73,7 +73,7 @@ void Rpc<TTr>::enqueue_response(ReqHandle *req_handle, MsgBuffer *resp_msgbuf) {
                      resp_msgbuf->get_pkthdr_0()->authentication_tag,
                      kMaxTagLen);
     double ns = erpc::ns_since(tput);
-    ERPC_ERROR("     Time for encryption took %lf ns\n", ns);
+    ERPC_WARN("     Time for encryption took %lf ns\n", ns);
     /******* TIMING *******/
   //}
 #endif
@@ -140,7 +140,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
                        pkthdr->msg_size, sslot->session->gcm_IV, AAD,
                        sizeof(pkthdr_t), current_tag, kMaxTagLen);
       double ns = erpc::ns_since(tput);
-      ERPC_ERROR("     Time for decryption took %lf ns\n", ns);
+      ERPC_WARN("     Time for decryption took %lf ns\n", ns);
       /******* TIMING *******/
       // Reset constantness
       memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag,
@@ -200,7 +200,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
                        sslot->session->gcm_IV, AAD, sizeof(pkthdr_t),
                        current_tag, kMaxTagLen);
       double ns = erpc::ns_since(tput);
-      ERPC_ERROR("     Time for decryption took %lf ns\n", ns);
+      ERPC_WARN("     Time for decryption took %lf ns\n", ns);
       /******* TIMING *******/
       // Reset constantness
       memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag,
@@ -269,7 +269,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
         resp_msgbuf->data_size, session->gcm_IV, AAD,
         resp_msgbuf->num_pkts * sizeof(pkthdr_t), current_tag, kMaxTagLen);
     double ns = erpc::ns_since(tput);
-    ERPC_ERROR("     Time for decryption took %lf ns\n", ns);
+    ERPC_WARN("     Time for decryption took %lf ns\n", ns);
     /******* TIMING *******/
     // Compare the received tag to the current tag to authenticate app data
     assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);

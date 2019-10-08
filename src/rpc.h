@@ -699,7 +699,7 @@ class Rpc {
           &item.msg_buffer->buf[offset], length, sslot->session->gcm_IV, AAD,
           sizeof(pkthdr_t), hdr->authentication_tag, kMaxTagLen);
       double ns = erpc::ns_since(tput);
-      ERPC_ERROR("     Time for encryption took %lf ns\n", ns);
+      ERPC_WARN("     Time for encryption took %lf ns\n", ns);
       /******* TIMING *******/
     }
 #endif
