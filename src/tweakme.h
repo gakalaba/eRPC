@@ -15,9 +15,6 @@ static constexpr size_t kRpcRTOUs = 5000;
 // For nano sleeps of encryption
 static constexpr size_t kNanoSleep = false;
 
-// Encryption Scheme
-static constexpr size_t kPerPktEncryption = true;
-
 // Congestion control
 static constexpr bool kEnableCc = true;  //TODO change
 static constexpr bool kEnableCcOpts = true;

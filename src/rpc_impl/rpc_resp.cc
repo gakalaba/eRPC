@@ -117,7 +117,6 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     resize_msg_buffer(resp_msgbuf, pkthdr->msg_size);
 
 #ifdef SECURE
-    if (kPerPktEncryption) {
       // Copy eRPC header (but not Transport headroom).
       memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
              sizeof(pkthdr_t) - kHeadroom);
@@ -145,13 +144,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
              kMaxTagLen);
       // Compare the received tag to the current tag to authenticate app data
       assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
-    } else {
-	    // Copy eRPC header and data (but not Transport headroom). The eRPC header
-	    // will be needed (e.g., to determine the request type) if the continuation
-	    // runs in a background thread.
-	    memcpy(resp_msgbuf->get_pkthdr_0()->ehdrptr(), pkthdr->ehdrptr(),
-			    pkthdr->msg_size + sizeof(pkthdr_t) - kHeadroom);
-    }
+    
 #else
     // Copy eRPC header and data (but not Transport headroom). The eRPC header
     // will be needed (e.g., to determine the request type) if the continuation
@@ -177,7 +170,6 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     // Hdr 0 was copied earlier, other headers are unneeded, so copy just data.
     const size_t pkt_idx = resp_ntoi(pkthdr->pkt_num, req_msgbuf->num_pkts);
 #ifdef SECURE
-    if (kPerPktEncryption) {
       // Per packet, first save the MAC/TAG. Then zero out the MAC/TAG
       // field in the given pkthdr, and finally decrypt the encrypted
       // pkt into the public buf
@@ -204,11 +196,7 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
              kMaxTagLen);
       // Compare the received tag to the current tag to authenticate app data
       assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
-    } else {
-      copy_data_to_msgbuf(resp_msgbuf, pkt_idx, pkthdr);
-      // Copy over the other nonzero packet headers as well, to be authenticated
-      memcpy(resp_msgbuf->get_pkthdr_n(pkt_idx), pkthdr, sizeof(pkthdr_t));
-    }
+    
 #else
     copy_data_to_msgbuf(resp_msgbuf, pkt_idx, pkthdr);
 #endif
@@ -247,30 +235,6 @@ void Rpc<TTr>::process_resp_one_st(SSlot *sslot, const pkthdr_t *pkthdr,
     session->client_info.enq_req_backlog.pop();
   }
 
-#ifdef SECURE
-  if (!kPerPktEncryption) {
-    // Upon receiving the entire message, first save the MAC/TAG. Then
-    // zero out the MAC/TAG field in the 0th pkthdr, and finally decrypt
-    // the encrypted msgbuf into the public buf
-    uint8_t received_tag[kMaxTagLen];
-    memcpy(received_tag, resp_msgbuf->get_pkthdr_0()->authentication_tag,
-           kMaxTagLen);
-    memset(resp_msgbuf->get_pkthdr_0()->authentication_tag, 0, kMaxTagLen);
-    uint8_t current_tag[kMaxTagLen];
-    uint8_t *AAD = reinterpret_cast<uint8_t *>(resp_msgbuf->get_last_pkthdr());
-    /******* TIMING *******/
-    struct timespec tput;
-    clock_gettime(CLOCK_REALTIME, &tput);
-    aesni_gcm128_dec(
-        &(session->gdata), resp_msgbuf->buf, resp_msgbuf->encrypted_buf,
-        resp_msgbuf->data_size, session->gcm_IV, AAD,
-        resp_msgbuf->num_pkts * sizeof(pkthdr_t), current_tag, kMaxTagLen);
-    ERPC_INFO("     Time for decryption took %lf ns\n", erpc::ns_since(tput));
-    /******* TIMING *******/
-    // Compare the received tag to the current tag to authenticate app data
-    assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
-  }
-#endif
   if (likely(_cont_etid == kInvalidBgETid)) {
     _cont_func(context, _tag);
   } else {
