@@ -14,9 +14,10 @@ static constexpr size_t kRpcRTOUs = 5000;
 
 // For nano sleeps of encryption
 static constexpr size_t kNanoSleep = false;
+static constexpr size_t kSleepLength = 5;
 
 // Congestion control
-static constexpr bool kEnableCc = true;  //TODO change
+static constexpr bool kEnableCc = true;  // TODO change
 static constexpr bool kEnableCcOpts = true;
 
 static constexpr bool kCcRTT = kEnableCc;       ///< Measure per-packet RTT

@@ -268,33 +268,34 @@ void Rpc<TTr>::process_large_req_one_st(SSlot *sslot, const pkthdr_t *pkthdr) {
   if (pkthdr->pkt_num != req_msgbuf.num_pkts - 1) enqueue_cr_st(sslot, pkthdr);
 
 #ifdef SECURE
-    // Per packet, first save the MAC/TAG. Then zero out the MAC/TAG
-    // field in the given pkthdr, and finally decrypt the encrypted
-    // packet into the public buf
-    uint8_t received_tag[kMaxTagLen];
-    memcpy(received_tag, pkthdr->authentication_tag, kMaxTagLen);
+  // Per packet, first save the MAC/TAG. Then zero out the MAC/TAG
+  // field in the given pkthdr, and finally decrypt the encrypted
+  // packet into the public buf
+  uint8_t received_tag[kMaxTagLen];
+  memcpy(received_tag, pkthdr->authentication_tag, kMaxTagLen);
 
-    // Temporarily cast away constantness of pkthdr to reset MAC field
-    memset(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, 0, kMaxTagLen);
+  // Temporarily cast away constantness of pkthdr to reset MAC field
+  memset(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, 0, kMaxTagLen);
 
-    uint8_t current_tag[kMaxTagLen];
-    uint8_t *AAD = reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
-    size_t offset = pkthdr->pkt_num * TTr::kMaxDataPerPkt;
-    /******* TIMING *******/
-    struct timespec tput;
-    clock_gettime(CLOCK_REALTIME, &tput); size_t length = std::min(TTr::kMaxDataPerPkt, pkthdr->msg_size - offset);
-    aesni_gcm128_dec(&(sslot->session->gdata), &req_msgbuf.buf[offset],
-                     reinterpret_cast<const uint8_t *>(pkthdr + 1), length,
-                     sslot->session->gcm_IV, AAD, sizeof(pkthdr_t), current_tag,
-                     kMaxTagLen);
+  uint8_t current_tag[kMaxTagLen];
+  uint8_t *AAD = reinterpret_cast<uint8_t *>(const_cast<pkthdr_t *>(pkthdr));
+  size_t offset = pkthdr->pkt_num * TTr::kMaxDataPerPkt;
+  /******* TIMING *******/
+  struct timespec tput;
+  clock_gettime(CLOCK_REALTIME, &tput);
+  size_t length = std::min(TTr::kMaxDataPerPkt, pkthdr->msg_size - offset);
+  aesni_gcm128_dec(&(sslot->session->gdata), &req_msgbuf.buf[offset],
+                   reinterpret_cast<const uint8_t *>(pkthdr + 1), length,
+                   sslot->session->gcm_IV, AAD, sizeof(pkthdr_t), current_tag,
+                   kMaxTagLen);
 
-    ERPC_INFO("     Time for decryption took %lf ns\n", erpc::ns_since(tput));
-    /******* TIMING *******/
-    // Reset constantness
-    memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag,
-           kMaxTagLen);
-    // Compare the received tag to the current tag to authenticate app data
-    assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
+  ERPC_INFO("     Time for decryption took %lf ns\n", erpc::ns_since(tput));
+  /******* TIMING *******/
+  // Reset constantness
+  memcpy(const_cast<pkthdr_t *>(pkthdr)->authentication_tag, received_tag,
+         kMaxTagLen);
+  // Compare the received tag to the current tag to authenticate app data
+  assert(memcmp(received_tag, current_tag, kMaxTagLen) == 0);
 #else
   // Header 0 was copied earlier. Request packet's index = packet number.
   copy_data_to_msgbuf(&req_msgbuf, pkthdr->pkt_num, pkthdr);
