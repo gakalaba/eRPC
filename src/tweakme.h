@@ -16,6 +16,10 @@ static constexpr size_t kRpcRTOUs = 5000;
 static constexpr size_t kNanoSleep = false;
 static constexpr size_t kSleepLength = 5;
 
+// For batched encryption
+static constexpr size_t kBatchEncryptSize = 8;
+static constexpr size_t kBatchEncryptSim = false;
+
 // Congestion control
 static constexpr bool kEnableCc = true;  // TODO change
 static constexpr bool kEnableCcOpts = true;

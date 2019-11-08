@@ -782,8 +782,65 @@ class Rpc {
     sslot->client_info.wheel_count++;
   }
 
+#ifdef SECURE
+  // Encrypt a batch of packets, exploit as much paralellism as possible with
+  // new aes_gcm instructions
+  inline void encrypt_as_batch(const tx_burst_item_t *tx_burst_arr,
+                               size_t tx_batch_i) {
+    int rounds = (tx_batch_i / kBatchEncryptSize) + 1;
+    Transport::tx_burst_item_t &item = NULL;
+    pkthdr_t *hdr = NULL;
+    Session *session;
+    for (int i = 0; i < rounds; i++) {
+      if (!kBatchEncryptSim) {
+        for (int j = 0; j < kBatchEncryptSize; j++) {
+          if (i * kBatchEncryptSize + j < tx_batch_i) {
+            item = tx_burst_item_t[i * kBatchEncryptSize + j];
+            hdr = item.msg_buffer->get_pkthdr_n(item.pkt_idx);
+            session = session_vec[pkthdr->dest_session_num];
+            memset(hdr->authentication_tag, 0, kMaxTagLen);
+            uint8_t *AAD = reinterpret_cast<uint8_t *>(hdr);
+            size_t offset = item.pkt_idx * TTr::kMaxDataPerPkt;
+            size_t length =
+                std::min(TTr::kMaxDataPerPkt, hdr->msg_size - offset);
+            aesni_gcm128_enc(
+                &(session->gdata), &item.msg_buffer->encrypted_buf[offset],
+                &item.msg_buffer->buf[offset], length, session->gcm_IV, AAD,
+                sizeof(pkthdr_t), hdr->authentication_tag, kMaxTagLen);
+          }
+        }
+      } else {
+        Transport::tx_burst_item_t &best_item = NULL;
+        pkthdr_t *best_hdr = NULL;
+        size_t best_length;
+        // Only need to time for the longest message in this rounds
+        for (int j = 0; j < kBatchEncryptSize; j++) {
+          if (i * kBatchEncryptSize + j < tx_batch_i) {
+            item = tx_burst_item_t[i * kBatchEncryptSize + j];
+            hdr = item.msg_buffer->get_pkthdr_n(item.pkt_idx);
+            size_t offset = item.pkt_idx * TTr::kMaxDataPerPkt;
+            size_t length =
+                std::min(TTr::kMaxDataPerPkt, hdr->msg_size - offset);
+            if ((best_hdr == NULL) || (length > best_length)) {
+              best_item = item;
+              best_hdr = hdr;
+              best_length = length;
+              session = session_vec[hdr->dest_session_num];
+            }
+          }
+        }
+        aesni_gcm128_enc(
+            &(session->gdata), &best_item.msg_buffer->encrypted_buf[offset],
+            &best_item.msg_buffer->buf[offset], length, session->gcm_IV, AAD,
+            sizeof(pkthdr_t), best_hdr->authentication_tag, kMaxTagLen);
+      }
+    }
+  }
+#endif
+
   /// Transmit packets in the TX batch
   inline void do_tx_burst_st() {
+    // TODO ANJA
     assert(in_dispatch());
     assert(tx_batch_i > 0);
 
@@ -794,7 +851,10 @@ class Rpc {
     if (kCcRTT) {
       size_t batch_tsc = 0;
       if (kCcOptBatchTsc) batch_tsc = dpath_rdtsc();
-
+// Before setting the time_stamps for the packets, encrypt them
+#ifdef SECURE
+      encrypt_as_batch(tx_burst_arr, tx_batch_i);
+#endif
       for (size_t i = 0; i < tx_batch_i; i++) {
         if (tx_burst_arr[i].tx_ts != nullptr) {
           *tx_burst_arr[i].tx_ts = kCcOptBatchTsc ? batch_tsc : dpath_rdtsc();
@@ -832,7 +892,8 @@ class Rpc {
    *
    * Although none of the polled RX ring buffers can be overwritten by the
    * NIC until we send at least one response/CR packet back, we do not control
-   * the order or time at which these packets are sent, due to constraints like
+   * the order or time at which these packets are sent, due to constraints
+   * like
    * session credits and packet pacing.
    */
   void process_comps_st();
@@ -861,7 +922,8 @@ class Rpc {
   // Queue handlers
   //
 
-  /// Try to transmit request packets from sslots that are stalled for credits.
+  /// Try to transmit request packets from sslots that are stalled for
+  /// credits.
   void process_credit_stall_queue_st();
 
   /// Process the wheel. We have already paid credits for sslots in the wheel.
@@ -883,7 +945,8 @@ class Rpc {
   // Packet loss handling
   //
 
-  /// Scan sessions and requests for session management and datapath packet loss
+  /// Scan sessions and requests for session management and datapath packet
+  /// loss
   void pkt_loss_scan_st();
 
   /// Retransmit packets for an sslot for which we suspect a packet loss
@@ -914,7 +977,8 @@ class Rpc {
   }
 
   /**
-   * @brief Perform a Timely rate update on receiving the explict CR or response
+   * @brief Perform a Timely rate update on receiving the explict CR or
+   * response
    * packet for this triggering packet number
    *
    * @param sslot The request sslot for which a packet is received
@@ -991,8 +1055,10 @@ class Rpc {
   // Sessions
 
   /// The append-only list of session pointers, indexed by session number.
-  /// Disconnected sessions are denoted by null pointers. This grows as sessions
-  /// are repeatedly connected and disconnected, but 8 bytes per session is OK.
+  /// Disconnected sessions are denoted by null pointers. This grows as
+  /// sessions
+  /// are repeatedly connected and disconnected, but 8 bytes per session is
+  /// OK.
   std::vector<Session *> session_vec;
 
   // Transport
@@ -1004,7 +1070,8 @@ class Rpc {
   Transport::tx_burst_item_t tx_burst_arr[TTr::kPostlist];  ///< Tx batch info
   size_t tx_batch_i = 0;  ///< The batch index for TX burst array
 
-  /// On calling rx_burst(), Transport fills-in packet buffer pointers into the
+  /// On calling rx_burst(), Transport fills-in packet buffer pointers into
+  /// the
   /// RX ring. Some transports such as InfiniBand and Raw reuse RX ring packet
   /// buffers in a circular order, so the ring's pointers remain unchanged
   /// after initialization. Other transports (e.g., DPDK) update rx_ring on
@@ -1020,7 +1087,8 @@ class Rpc {
   size_t pkt_loss_scan_tsc;  ///< Timestamp of the previous scan for lost pkts
 
   /// The doubly-linked list of active RPCs. An RPC slot is added to this list
-  /// when the request is enqueued. The slot is deleted from this list when its
+  /// when the request is enqueued. The slot is deleted from this list when
+  /// its
   /// continuation is invoked or queued to a background thread.
   ///
   /// This should not be a vector because we need random deletes. Having
@@ -1038,7 +1106,8 @@ class Rpc {
 
   // Cold members live below, in order of coolness
 
-  /// The timing-wheel rate limiter. Packets in the wheel have consumed credits,
+  /// The timing-wheel rate limiter. Packets in the wheel have consumed
+  /// credits,
   /// but not bumped the num_tx counter.
   TimingWheel *wheel;
 
@@ -1069,7 +1138,8 @@ class Rpc {
     bool hard_wheel_bypass = false;   ///< Wheel bypass regardless of congestion
     double pkt_drop_prob = 0.0;       ///< Probability of dropping an RPC packet
 
-    /// Derived: Drop packet iff urand[0, ..., one billion] is smaller than this
+    /// Derived: Drop packet iff urand[0, ..., one billion] is smaller than
+    /// this
     uint32_t pkt_drop_thresh_billion = 0;
   } faults;
 
