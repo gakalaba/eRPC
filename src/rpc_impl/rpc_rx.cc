@@ -2,6 +2,54 @@
 
 namespace erpc {
 
+#ifdef SECURE
+void decrypt_as_batch(int num_pkts) {
+  int rounds = (num_pkts / kBatchCryptoSize) + 1;
+  struct gcm_data *gdata[kBatchCryptoSize];
+  uint8_t *out[kBatchCryptoSize];
+  uint8_t const *in[kBatchCryptoSize];
+  uint64_t plaintext_len[kBatchCryptoSize];
+  uint8_t *iv[kBatchCryptoSize];
+  uint8_t const *aad[kBatchCryptoSize];
+  uint64_t aad_len[kBatchCryptoSize];
+  uint8_t *auth_tag[kBatchCryptoSize];
+  uint64_t auth_tag_len[kBatchCryptoSize];
+  pkthdr_t encrypted_pkthdr;
+  pkthdr_t pkthdr;
+  Session *session;
+  size_t batch_rx_ring_head = rx_ring_head;
+  for (int i = 0; i < rounds; i++) {
+    for (int j = 0;
+         (j < kBatchCryptoSize) && (j + i * kBatchCryptoSize < num_pkts); j++) {
+      encrypted_pkthdr =
+          reinterpret_cast<pkthdr_t *>(rx_ring[batch_rx_ring_head]);
+      pkthdr =
+          reinterpret_cast<pkthdr_t *>(rx_ring_decrypt[batch_rx_ring_head]);
+      uint8_t received_tag[kMaxTagLen];
+      memcpy(received_tag, encrypted_pkthdr->authentication_tag, kMaxTagLen);
+      memset(encrypted_pkthdr->authentication_tag, 0, kMaxTagLen);
+      uint8_t current_tag[kMaxTagLen];
+      uint8_t *AAD = reinterpret_cast<uint8_t *>(encrypted_pkthdr);
+      session = session_vec[encrypted_pkthdr->dest_session_num];
+      // Fill in the batched array parameters
+      gcm_data[j] = &(session->gdata);
+      out[j] = pkthdr;
+      in[j] = encrypted_pkthdr;
+      batch_rx_ring_head =
+          (batch_rx_ring_head + 1) % Transport::kNumRxRingEntries;
+      plaintext_len[j] = encrypted_pkthdr->msg_size;
+      iv[j] = session->gcm_IV;
+      aad[j] = AAD;
+      aad_len[j] = sizeof(pkthdr_t);
+      auth_tag[j] = current_tag;
+      auth_tag_len[j] = kMaxTagLen;
+    }
+    anja_aesni_gcm128_dec_batch(gcm_data, out, in, plaintext_len, iv, aad,
+                                aad_len, auth_tag, auth_tag_len, j);
+  }
+}
+#endif
+
 template <class TTr>
 void Rpc<TTr>::process_comps_st() {
   assert(in_dispatch());
@@ -15,8 +63,16 @@ void Rpc<TTr>::process_comps_st() {
   // ev_loop_tsc was taken just before calling the packet RX code
   const size_t &batch_rx_tsc = ev_loop_tsc;
 
+#ifdef SECURE
+  // Batch Decrypt all the packets
+  decrypt_as_batch(num_pkts);
+#endif
   for (size_t i = 0; i < num_pkts; i++) {
+#ifdef SECURE
+    auto *pkthdr = reinterpret_cast<pkthdr_t *>(rx_ring_decrypt[rx_ring_head]);
+#else
     auto *pkthdr = reinterpret_cast<pkthdr_t *>(rx_ring[rx_ring_head]);
+#endif
     rx_ring_head = (rx_ring_head + 1) % Transport::kNumRxRingEntries;
 
     assert(pkthdr->check_magic());

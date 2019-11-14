@@ -811,28 +811,51 @@ class Rpc {
     }
   }
 
+  inline void anja_aesni_gcm128_dec_batch(
+      struct gcm_data *gdata[], uint8_t *out[], uint8_t const *in[],
+      uint64_t plaintext_len[], uint8_t *iv[], uint8_t const *aad[],
+      uint64_t aad_len[], uint8_t *auth_tag[], uint64_t auth_tag_len[], int N) {
+    if (kSequential) {
+      for (int i = 0; i < N; i++) {
+        aesni_gcm128_dec(gdata[i], out[i], in[i], plaintext_len[i], iv[i],
+            aad[i], aad_len[i], auth_tag[i], auth_tag_len[i]);
+      }
+    } else {
+      int max_len = -1;
+      int max_i;
+      for (int i = 0; i < N; i++) {
+        if ((max_len == -1) || (max_len < plaintext_len[i])) {
+          max_len = plaintext_len[i];
+          max_i = i;
+        }
+      }
+      aesni_gcm128_dec(gdata[max_i], out[max_i], in[max_i], plaintext_len[max_i], iv[max_i],
+          aad[max_i], aad_len[max_i], auth_tag[max_i], auth_tag_len[max_i]);
+    }
+  }
+
   // Encrypt a batch of packets, exploit as much paralellism as possible with
   // new aes_gcm instructions
   inline void encrypt_as_batch(const tx_burst_item_t *tx_burst_arr,
                                size_t tx_batch_i) {
-    int rounds = (tx_batch_i / kBatchEncryptSize) + 1;
+    int rounds = (tx_batch_i / kBatchCryptoSize) + 1;
     Transport::tx_burst_item_t &item = NULL;
     pkthdr_t *hdr = NULL;
     Session *session;
-    struct gcm_data *gdata[kBatchEncryptSize];
-    uint8_t *out[kBatchEncryptSize];
-    uint8_t const *in[kBatchEncryptSize];
-    uint64_t plaintext_len[kBatchEncryptSize];
-    uint8_t *iv[kBatchEncryptSize];
-    uint8_t const *aad[kBatchEncryptSize];
-    uint64_t aad_len[kBatchEncryptSize];
-    uint8_t *auth_tag[kBatchEncryptSize];
-    uint64_t auth_tag_len[kBatchEncryptSize];
+    struct gcm_data *gdata[kBatchCryptoSize];
+    uint8_t *out[kBatchCryptoSize];
+    uint8_t const *in[kBatchCryptoSize];
+    uint64_t plaintext_len[kBatchCryptoSize];
+    uint8_t *iv[kBatchCryptoSize];
+    uint8_t const *aad[kBatchCryptoSize];
+    uint64_t aad_len[kBatchCryptoSize];
+    uint8_t *auth_tag[kBatchCryptoSize];
+    uint64_t auth_tag_len[kBatchCryptoSize];
     for (int i = 0; i < rounds; i++) {
-      for (int j = 0; (j < kBatchEncryptSize) &&
-                      (j + i * kBatchEncryptSize < tx - batch_i);
+      for (int j = 0; (j < kBatchCryptoSize) &&
+                      (j + i * kBatchCryptoSize < tx_batch_i);
            j++) {
-        item = tx_burst_item_t[i * kBatchEncryptSize + j];
+        item = tx_burst_item_t[i * kBatchCryptoSize + j];
         hdr = item.msg_buffer->get_pkthdr_n(item.pkt_idx);
         session = session_vec[pkthdr->dest_session_num];
         memset(hdr->authentication_tag, 0, kMaxTagLen);
@@ -844,10 +867,10 @@ class Rpc {
         out[j] = &item.msg - buffer_ > encrypted - buf[offset];
         in[j] = &item.msg - buffer_ > buf[offset];
         plaintext_len[j] = length;
-        iv[j] = session_ > gcm - IV;
+        iv[j] = session->gcm_IV;
         aad[j] = AAD;
         aad_len[j] = sizeof(pkthdr_t);
-        auth_tag[j] = hdr_ > authentication - tag;
+        auth_tag[j] = hdr->authentication_tag;
         auth_tag_len[j] = kMaxTagLen;
       }
       anja_aesni_gcm128_enc_batch(gcm_data, out, in, plaintext_len, iv, aad,

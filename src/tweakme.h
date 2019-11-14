@@ -17,8 +17,8 @@ static constexpr size_t kNanoSleep = false;
 static constexpr size_t kSleepLength = 5;
 
 // For batched encryption
-static constexpr size_t kBatchEncryptSize = 8;
-static constexpr size_t kBatchEncryptSim = false;
+static constexpr size_t kBatchCryptoSize = 8;
+static constexpr size_t kSequential = true;
 
 // Congestion control
 static constexpr bool kEnableCc = true;  // TODO change
