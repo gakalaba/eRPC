@@ -57,6 +57,9 @@ Rpc<TTr>::Rpc(Nexus *nexus, void *context, uint8_t rpc_id,
 
   // Complete transport initialization using the hugepage allocator
   transport->init_hugepage_structures(huge_alloc, rx_ring);
+#ifdef SECURE
+  transport->init_hugepage_structures(huge_alloc, rx_ring_decrypt);
+#endif
 
   wheel = nullptr;
   if (kCcPacing) {
