@@ -95,6 +95,8 @@ int check_data(const uint8_t *test, const uint8_t *expected, uint64_t len,
 // Correctness test for encrypting 16 byte payloads
 static constexpr size_t kTestLenSmall = 16;
 static constexpr size_t kAADLength = 16;
+
+
 TEST(AesGcmTest, CorrectnessSmall) {
   struct gcm_data gdata_small;  // defined in aes_gcm
   // Table valus for small test, including Key, Plaintext, Cyphertext, Tag
@@ -364,6 +366,103 @@ TEST(AesGcmTest, PerfBig) {
   }
 }
 
+// New test to check the correctness of encrypting and decrypting multiple 
+// packets with the same gdata structure, and switching the order for encrypting
+// the packets and decyrpting the packets
+TEST(AesGcmTest, OutOfOrderCorrectness) {
+  struct gcm_data gdata_small;  // defined in aes_gcm
+  // Table valus for small test, including Key, Plaintext, Cyphertext, Tag
+  // Vector 3 in gcm_vectors.h
+  // Key is 16 bytes
+  uint8_t key_small[GCM_128_KEY_LEN] = {0xc9, 0x39, 0xcc, 0x13, 0x39, 0x7c,
+                                        0x1d, 0x37, 0xde, 0x6a, 0xe0, 0xe1,
+                                        0xcb, 0x7c, 0x42, 0x3c};
+  // Message is 16 bytes
+  unsigned char plaintext_small_true1[kTestLenSmall] = {
+      0xc3, 0xb3, 0xc4, 0x1f, 0x11, 0x3a, 0x31, 0xb7,
+      0x3d, 0x9a, 0x5c, 0xd4, 0x32, 0x10, 0x30, 0x69};
+  unsigned char plaintext_small_true2[kTestLenSmall] = {
+      0x89, 0x12, 0x00, 0xf1, 0x11, 0x3b, 0xbb, 0xfe,
+      0x32, 0x45, 0xd3, 0xb9, 0x31, 0x40, 0xEa, 0xae};
+  
+  
+  unsigned char plaintext_small_test1[kTestLenSmall];
+  unsigned char plaintext_small_test2[kTestLenSmall];
+  // Cypher text will be same size as message
+  unsigned char cyphertext_small_true[kTestLenSmall] = {
+      0x93, 0xfe, 0x7d, 0x9e, 0x9b, 0xfd, 0x10, 0x34,
+      0x8a, 0x56, 0x06, 0xe5, 0xca, 0xfa, 0x73, 0x54};
+  unsigned char cyphertext_small_test1[kTestLenSmall];
+  unsigned char cyphertext_small_test2[kTestLenSmall];
+  // Authentication tag will be 16 bytes
+  unsigned char auth_tag_small_true[MAX_TAG_LEN] = {
+      0x00, 0x32, 0xa1, 0xdc, 0x85, 0xf1, 0xc9, 0x78,
+      0x69, 0x25, 0xa2, 0xe7, 0x1d, 0x82, 0x72, 0xdd};
+  unsigned char auth_tag_small_test1[MAX_TAG_LEN];
+  unsigned char auth_tag_small_test2[MAX_TAG_LEN];
+  // Initialization vector will be 16 bytes
+  unsigned char IV_small[GCM_IV_LEN] = {0xb3, 0xd8, 0xcc, 0x01, 0x7c, 0xbb,
+                                        0x89, 0xb3, 0x9e, 0x0f, 0x67, 0xe2,
+                                        0x0,  0x0,  0x0,  0x1};
+  // Additional data will be 16 bytes
+  unsigned char AAD_small[kAADLength] = {0x24, 0x82, 0x56, 0x02, 0xbd, 0x12,
+                                         0xa9, 0x84, 0xe0, 0x09, 0x2d, 0x3e,
+                                         0x44, 0x8e, 0xda, 0x5f};
+  printf(
+      "AES GCM correctness parameters small plain text length:%zu; "
+      "IV length:%d; ADD length:%zu; Key length:%d \n",
+      kTestLenSmall, GCM_IV_LEN, kAADLength, GCM_128_KEY_LEN);
+
+  // Prefills the gcm data with key values for each round
+  // and the initial sub hash key for tag encoding
+  // This is only required once for a given key
+  aesni_gcm128_pre(key_small, &gdata_small);
+  // Correctness for small Plaintext
+  {
+    // Encrypt 1
+    aesni_gcm128_enc(&gdata_small, cyphertext_small_test1, plaintext_small_true1,
+                     kTestLenSmall, IV_small, AAD_small, kAADLength,
+                     auth_tag_small_test1, MAX_TAG_LEN);
+    // Encrypt 2
+    aesni_gcm128_enc(&gdata_small, cyphertext_small_test2, plaintext_small_true2,
+                     kTestLenSmall, IV_small, AAD_small, kAADLength,
+                     auth_tag_small_test2, MAX_TAG_LEN);
+    // Check intermediate generated ciphertext for 1 
+    check_data(cyphertext_small_test1, cyphertext_small_true, kTestLenSmall, 0,
+               "ISA-L Encrypt small plaintext check of Cyphertext (C)");
+    check_data(auth_tag_small_test1, auth_tag_small_true, MAX_TAG_LEN, 0,
+               "ISA-L Encrypt small plaintext check of Authentication Tag (T)");
+             
+  }
+
+  {
+    // Decrypt 2
+    aesni_gcm128_dec(&gdata_small, plaintext_small_test2, cyphertext_small_test2,
+                     kTestLenSmall, IV_small, AAD_small, kAADLength,
+                     auth_tag_small_test2, MAX_TAG_LEN);
+    // Decrypt 1
+    aesni_gcm128_dec(&gdata_small, plaintext_small_test1, cyphertext_small_test1,
+                     kTestLenSmall, IV_small, AAD_small, kAADLength,
+                     auth_tag_small_test1, MAX_TAG_LEN);
+   
+    // Check both extracted plaintexts and compare to original
+    check_data(plaintext_small_test1, plaintext_small_true1, kTestLenSmall, 0,
+               "ISA-L Decrypt small plaintext check of Plaintext (P)");
+    check_data(plaintext_small_test2, plaintext_small_true2, kTestLenSmall, 0,
+               "ISA-L Decrypt small plaintext check of Plaintext (P)");
+    
+
+    
+    
+    //check_data(auth_tag_small_test, auth_tag_small_true, MAX_TAG_LEN, 0,
+    //           "ISA-L Decrypt small plaintext check of Authentication Tag (T)");
+  }
+}
+
+
+
+
+/*
 // Correctness test for piece-wise encrypting 60 byte payloads
 TEST(AesGcmTest, BlockCorrectnessBig) {
   struct gcm_data gdata_big;  // defined in aes_gcm
@@ -438,7 +537,7 @@ TEST(AesGcmTest, BlockCorrectnessBig) {
                "ISA-L Decrypt big plaintext check of Authentication Tag (T)");
   }
 }
-
+*/
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
