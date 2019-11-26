@@ -836,7 +836,7 @@ class Rpc {
 
   // Encrypt a batch of packets, exploit as much paralellism as possible with
   // new aes_gcm instructions
-  inline void encrypt_as_batch(const tx_burst_item_t *tx_burst_arr,
+  inline void encrypt_as_batch(const Transport::tx_burst_item_t *tx_burst_arr,
                                size_t tx_batch_i) {
     int rounds = (tx_batch_i / kBatchCryptoSize) + 1;
     Transport::tx_burst_item_t &item = NULL;
@@ -851,21 +851,22 @@ class Rpc {
     uint64_t aad_len[kBatchCryptoSize];
     uint8_t *auth_tag[kBatchCryptoSize];
     uint64_t auth_tag_len[kBatchCryptoSize];
+    int j;
     for (int i = 0; i < rounds; i++) {
-      for (int j = 0; (j < kBatchCryptoSize) &&
+      for (j = 0; (j < kBatchCryptoSize) &&
                       (j + i * kBatchCryptoSize < tx_batch_i);
            j++) {
-        item = tx_burst_item_t[i * kBatchCryptoSize + j];
+        item = tx_burst_arr[i * kBatchCryptoSize + j];
         hdr = item.msg_buffer->get_pkthdr_n(item.pkt_idx);
-        session = session_vec[pkthdr->dest_session_num];
+        session = session_vec[hdr->dest_session_num];
         memset(hdr->authentication_tag, 0, kMaxTagLen);
         uint8_t *AAD = reinterpret_cast<uint8_t *>(hdr);
         size_t offset = item.pkt_idx * TTr::kMaxDataPerPkt;
         size_t length = std::min(TTr::kMaxDataPerPkt, hdr->msg_size - offset);
         // Fill in batched array parameters
-        gcm_data[j] = &(session->gdata);
-        out[j] = &item.msg - buffer_ > encrypted - buf[offset];
-        in[j] = &item.msg - buffer_ > buf[offset];
+        gdata[j] = &(session->gdata);
+        out[j] = &item.msg_buffer->encrypted_buf[offset];
+        in[j] = &item.msg_buffer->buf[offset];
         plaintext_len[j] = length;
         iv[j] = session->gcm_IV;
         aad[j] = AAD;
@@ -873,7 +874,7 @@ class Rpc {
         auth_tag[j] = hdr->authentication_tag;
         auth_tag_len[j] = kMaxTagLen;
       }
-      anja_aesni_gcm128_enc_batch(gcm_data, out, in, plaintext_len, iv, aad,
+      anja_aesni_gcm128_enc_batch(gdata, out, in, plaintext_len, iv, aad,
                                   aad_len, auth_tag, auth_tag_len, j);
     }
   }
