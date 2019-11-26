@@ -12,6 +12,7 @@ namespace erpc {
 /// Packet loss timeout for an RPC request in microseconds
 static constexpr size_t kRpcRTOUs = 5000;
 
+#ifdef SECURE
 // For nano sleeps of encryption
 static constexpr size_t kNanoSleep = false;
 static constexpr size_t kSleepLength = 5;
@@ -19,6 +20,7 @@ static constexpr size_t kSleepLength = 5;
 // For batched encryption
 static constexpr size_t kBatchCryptoSize = 8;
 static constexpr size_t kSequential = true;
+#endif
 
 // Congestion control
 static constexpr bool kEnableCc = true;  // TODO change

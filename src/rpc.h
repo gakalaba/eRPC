@@ -685,25 +685,6 @@ class Rpc {
     item.msg_buffer = const_cast<MsgBuffer *>(tx_msgbuf);
     item.pkt_idx = pkt_idx;
     pkthdr_t *hdr = tx_msgbuf->get_pkthdr_n(pkt_idx);
-#ifdef SECURE
-    memset(hdr->authentication_tag, 0, kMaxTagLen);
-    uint8_t *AAD = reinterpret_cast<uint8_t *>(hdr);
-    size_t offset = pkt_idx * TTr::kMaxDataPerPkt;
-    size_t length = std::min(TTr::kMaxDataPerPkt, hdr->msg_size - offset);
-    if (!kNanoSleep) {
-      /******* TIMING *******/
-      struct timespec tput;
-      clock_gettime(CLOCK_REALTIME, &tput);
-      aesni_gcm128_enc(
-          &(sslot->session->gdata), &item.msg_buffer->encrypted_buf[offset],
-          &item.msg_buffer->buf[offset], length, sslot->session->gcm_IV, AAD,
-          sizeof(pkthdr_t), hdr->authentication_tag, kMaxTagLen);
-      ERPC_INFO("     Time for encryption took %lf ns\n", erpc::ns_since(tput));
-      /******* TIMING *******/
-    } else {
-      nano_sleep(kSleepLength, 2.09754);
-    }
-#endif
     if (kCcRTT) item.tx_ts = tx_ts;
 
     if (kTesting) {
