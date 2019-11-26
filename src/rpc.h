@@ -1087,9 +1087,6 @@ class Rpc {
 
   // Transport
   TTr *transport = nullptr;  ///< The unreliable transport
-#ifdef SECURE
-  TTr *transport_d = nullptr;
-#endif
   /// Current number of ring buffers available to use for sessions
   size_t ring_entries_available = TTr::kNumRxRingEntries;
 
@@ -1128,9 +1125,6 @@ class Rpc {
 
   // Allocator
   HugeAlloc *huge_alloc = nullptr;  ///< This thread's hugepage allocator
-#ifdef SECURE
-  HugeAlloc *huge_alloc_d = nullptr;
-#endif 
   std::mutex huge_alloc_lock;       ///< A lock to guard the huge allocator
 
   MsgBuffer ctrl_msgbufs[2 * TTr::kUnsigBatch];  ///< Buffers for RFR/CR

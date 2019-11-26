@@ -58,20 +58,24 @@ Rpc<TTr>::Rpc(Nexus *nexus, void *context, uint8_t rpc_id,
   // Complete transport initialization using the hugepage allocator
   transport->init_hugepage_structures(huge_alloc, rx_ring);
 #ifdef SECURE
-   // Partially initialize the transport without using hugepages. This
-  // initializes the transport's memory registration functions required for
-  // the hugepage allocator.
-  transport_d =
-      new TTr(nexus->sm_udp_port, rpc_id, phy_port, numa_node, trace_file);
-
-  huge_alloc_d = new HugeAlloc(kInitialHugeAllocSize, numa_node,
-                             transport_d->reg_mr_func, transport_d->dereg_mr_func);
-
   // Complete transport initialization using the hugepage allocator
-  transport->init_hugepage_structures(huge_alloc_d, rx_ring_decrypt);
+  std::ostringstream xmsg;  // The exception message
+  size_t ring_extent_size = TTr::kNumRxRingEntries * TTr::kRecvSize;
+  Buffer r_e = huge_alloc->alloc_raw(ring_extent_size, DoRegister::kTrue);
+  if (r_e.buf == nullptr) {
+    xmsg << "Failed to allocate " << std::setprecision(2)
+      << 1.0 * ring_extent_size / MB(1) << "MB for ring buffers. "
+      << HugeAlloc::alloc_fail_help_str;
+    throw std::runtime_error(xmsg.str());
 
-  //delete huge_alloc_d;
-  //delete transport_d;
+  }
+  for (size_t i = 0; i < TTr::kRQDepth; i++) {
+    uint8_t *buf = r_e.buf;
+    size_t offset = (i * TTr::kRecvSize) + (64 - TTr::kGRHBytes);
+    assert(offset + (TTr::kGRHBytes + TTr::kMTU) <= ring_extent_size);
+    // Circular link
+    rx_ring[i] = &buf[offset + TTr::kGRHBytes];  // RX ring entry 
+  }
 #endif
 
   wheel = nullptr;
@@ -129,10 +133,6 @@ Rpc<TTr>::~Rpc() {
   // Allow \p transport to clean up non-hugepage structures
   delete transport;
 
-#ifdef SECURE
-  delete huge_alloc_d;
-  delete transport_d;
-#endif
   nexus->unregister_hook(&nexus_hook);
 
   if (ERPC_LOG_LEVEL >= ERPC_LOG_LEVEL_REORDER) fclose(trace_file);
