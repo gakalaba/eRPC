@@ -797,10 +797,10 @@ class Rpc {
 
     } else {
       // Simulate Max Speedup, encrypt only the largest message
-      int max_len = -1;
+      uint64_t max_len = 0;
       int max_i;
       for (int i = 0; i < N; i++) {
-        if ((max_len == -1) || (max_len < plaintext_len[i])) {
+        if ((max_len <= plaintext_len[i])) {
           max_len = plaintext_len[i];
           max_i = i;
         }
@@ -821,10 +821,10 @@ class Rpc {
             aad[i], aad_len[i], auth_tag[i], auth_tag_len[i]);
       }
     } else {
-      int max_len = -1;
+      size_t max_len = 0;
       int max_i;
       for (int i = 0; i < N; i++) {
-        if ((max_len == -1) || (max_len < plaintext_len[i])) {
+        if ((max_len <= plaintext_len[i])) {
           max_len = plaintext_len[i];
           max_i = i;
         }
@@ -838,8 +838,8 @@ class Rpc {
   // new aes_gcm instructions
   inline void encrypt_as_batch(const Transport::tx_burst_item_t *tx_burst_arr,
                                size_t tx_batch_i) {
-    int rounds = (tx_batch_i / kBatchCryptoSize) + 1;
-    Transport::tx_burst_item_t &item = NULL;
+    size_t rounds = (tx_batch_i / kBatchCryptoSize) + 1;
+    Transport::tx_burst_item_t item;
     pkthdr_t *hdr = NULL;
     Session *session;
     struct gcm_data *gdata[kBatchCryptoSize];
@@ -851,8 +851,8 @@ class Rpc {
     uint64_t aad_len[kBatchCryptoSize];
     uint8_t *auth_tag[kBatchCryptoSize];
     uint64_t auth_tag_len[kBatchCryptoSize];
-    int j;
-    for (int i = 0; i < rounds; i++) {
+    size_t j;
+    for (size_t i = 0; i < rounds; i++) {
       for (j = 0; (j < kBatchCryptoSize) &&
                       (j + i * kBatchCryptoSize < tx_batch_i);
            j++) {
@@ -940,6 +940,7 @@ class Rpc {
    */
   void process_comps_st();
 
+  void decrypt_as_batch(size_t num_pkts);
   /**
    * @brief Submit a request work item to a random background thread
    *

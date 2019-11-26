@@ -3,8 +3,10 @@
 namespace erpc {
 
 #ifdef SECURE
-void decrypt_as_batch(int num_pkts) {
-  int rounds = (num_pkts / kBatchCryptoSize) + 1;
+
+template <class TTr>
+void Rpc<TTr>::decrypt_as_batch(size_t num_pkts) {
+  size_t rounds = (num_pkts / kBatchCryptoSize) + 1;
   struct gcm_data *gdata[kBatchCryptoSize];
   uint8_t *out[kBatchCryptoSize];
   uint8_t const *in[kBatchCryptoSize];
@@ -14,13 +16,14 @@ void decrypt_as_batch(int num_pkts) {
   uint64_t aad_len[kBatchCryptoSize];
   uint8_t *auth_tag[kBatchCryptoSize];
   uint64_t auth_tag_len[kBatchCryptoSize];
-  pkthdr_t encrypted_pkthdr;
-  pkthdr_t pkthdr;
+  pkthdr_t *encrypted_pkthdr;
+  pkthdr_t *pkthdr;
   Session *session;
   size_t batch_rx_ring_head = rx_ring_head;
-  for (int i = 0; i < rounds; i++) {
-    for (int j = 0;
-         (j < kBatchCryptoSize) && (j + i * kBatchCryptoSize < num_pkts); j++) {
+  size_t j;
+  for (size_t i = 0; i < rounds; i++) {
+    for (j = 0; (j < kBatchCryptoSize) && (j + i * kBatchCryptoSize < num_pkts);
+         j++) {
       encrypted_pkthdr =
           reinterpret_cast<pkthdr_t *>(rx_ring[batch_rx_ring_head]);
       pkthdr =
@@ -32,9 +35,9 @@ void decrypt_as_batch(int num_pkts) {
       uint8_t *AAD = reinterpret_cast<uint8_t *>(encrypted_pkthdr);
       session = session_vec[encrypted_pkthdr->dest_session_num];
       // Fill in the batched array parameters
-      gcm_data[j] = &(session->gdata);
-      out[j] = pkthdr;
-      in[j] = encrypted_pkthdr;
+      gdata[j] = &(session->gdata);
+      out[j] = reinterpret_cast<uint8_t *>(pkthdr);
+      in[j] = reinterpret_cast<uint8_t *>(encrypted_pkthdr);
       batch_rx_ring_head =
           (batch_rx_ring_head + 1) % Transport::kNumRxRingEntries;
       plaintext_len[j] = encrypted_pkthdr->msg_size;
@@ -44,8 +47,8 @@ void decrypt_as_batch(int num_pkts) {
       auth_tag[j] = current_tag;
       auth_tag_len[j] = kMaxTagLen;
     }
-    anja_aesni_gcm128_dec_batch(gcm_data, out, in, plaintext_len, iv, aad,
-                                aad_len, auth_tag, auth_tag_len, j);
+    anja_aesni_gcm128_dec_batch(gdata, out, in, plaintext_len, iv, aad, aad_len,
+                                auth_tag, auth_tag_len, j);
   }
 }
 #endif
