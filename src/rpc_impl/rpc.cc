@@ -58,7 +58,20 @@ Rpc<TTr>::Rpc(Nexus *nexus, void *context, uint8_t rpc_id,
   // Complete transport initialization using the hugepage allocator
   transport->init_hugepage_structures(huge_alloc, rx_ring);
 #ifdef SECURE
-  transport->init_hugepage_structures(huge_alloc, rx_ring_decrypt);
+   // Partially initialize the transport without using hugepages. This
+  // initializes the transport's memory registration functions required for
+  // the hugepage allocator.
+  transport_d =
+      new TTr(nexus->sm_udp_port, rpc_id, phy_port, numa_node, trace_file);
+
+  huge_alloc_d = new HugeAlloc(kInitialHugeAllocSize, numa_node,
+                             transport_d->reg_mr_func, transport_d->dereg_mr_func);
+
+  // Complete transport initialization using the hugepage allocator
+  transport->init_hugepage_structures(huge_alloc_d, rx_ring_decrypt);
+
+  //delete huge_alloc_d;
+  //delete transport_d;
 #endif
 
   wheel = nullptr;
@@ -116,6 +129,10 @@ Rpc<TTr>::~Rpc() {
   // Allow \p transport to clean up non-hugepage structures
   delete transport;
 
+#ifdef SECURE
+  delete huge_alloc_d;
+  delete transport_d;
+#endif
   nexus->unregister_hook(&nexus_hook);
 
   if (ERPC_LOG_LEVEL >= ERPC_LOG_LEVEL_REORDER) fclose(trace_file);
